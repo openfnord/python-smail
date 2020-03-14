@@ -19,7 +19,7 @@ with open('smail/version.py') as f:
 
 test_requires = ['pytest', 'pytest-flake8', 'pytest-cov', 'coverage']
 setup(
-    name='smail',
+    name='python-smail',
     version=__version__,
     description='Python S/MIME Toolkit',
     long_description=README,
