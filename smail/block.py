@@ -1,7 +1,5 @@
 # coding: utf-8
 
-from __future__ import unicode_literals
-
 import os
 from abc import ABCMeta
 from abc import abstractmethod
@@ -74,13 +72,13 @@ class AES(BlockCipher):
 
 
 def get_cipher(algorithm):
-    algorithms = {
+    _algorithms = {
         "aes128_cbc": (AES, (modes.CBC, 16)),
         "aes192_cbc": (AES, (modes.CBC, 24)),
         "aes256_cbc": (AES, (modes.CBC, 32)),
     }
-    if algorithm in algorithms:
-        cipher, parameters = algorithms[algorithm]
+    if algorithm in _algorithms:
+        cipher, parameters = _algorithms[algorithm]
         return cipher(algorithm, *parameters)
     else:
         return None

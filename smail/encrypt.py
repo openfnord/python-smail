@@ -67,11 +67,11 @@ def encrypt(message, certs, algorithm="aes256_cbc"):
     # Build the enveloped data and encode in base64
     enveloped_data = cms.ContentInfo(
         {
-            u"content_type": u"enveloped_data",
-            u"content": {
-                u"version": u"v0",
-                u"recipient_infos": recipient_infos,
-                u"encrypted_content_info": encrypted_content_info,
+            "content_type": "enveloped_data",
+            "content": {
+                "version": "v0",
+                "recipient_infos": recipient_infos,
+                "encrypted_content_info": encrypted_content_info,
             },
         }
     )

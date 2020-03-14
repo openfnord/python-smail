@@ -1,7 +1,7 @@
 .idea
 .*.swp
 build/
-smime.egg-info/
+smail.egg-info/
 dist/
 .pytest_cache/
 .coverage
@@ -63,6 +63,5 @@ venv/
 ENV/
 
 # editor
-.idea
 .vscode
 *.sublime-*

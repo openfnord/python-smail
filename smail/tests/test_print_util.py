@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from smime import print_util
+from smail import print_util
 
 
 def test_bits_to_hex():

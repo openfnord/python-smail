@@ -1,7 +1,6 @@
-graft smime
 include AUTHORS
 include CONTRIBUTING.md
-include CHANGES.rst
+include CHANGELOG.rst
 include LICENSE
 include README.rst
 

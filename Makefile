@@ -20,13 +20,13 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 lint: ## check style with flake8
-	flake8 smime/
+	flake8 smail/
 
 isort: ## run isort recursively
-	isort smime/ -rc
+	isort smail/ -rc
 
 test: ## run tests quickly with the default Python
-	py.test smime/tests
+	py.test smail/tests
 
 install: clean ## install the package to the active Python's site-packages
 	python setup.py install

@@ -1,6 +1,6 @@
-=====================
-Python S/MIME Toolkit
-=====================
+============
+Python SMAIL
+============
 
 .. warning::
     This package is pure fork version from https://github.com/balena/python-smime with immediate release version which contains some necessary refactoring.
@@ -23,7 +23,7 @@ anymore (because of the latter dependency), but at least works.
 Requirements
 ------------
 
-* Python 2.7 or Python 3.5+
+* Python 3.5+
 * cryptography
 * asn1crypto
 

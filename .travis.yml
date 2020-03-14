@@ -30,6 +30,6 @@ install:
 script:
   - make lint
   - make clean
-  - pytest -s --cov=smime/ -s --tb=native -v --cov-report term-missing --cov-append smime/
+  - pytest -s --cov=smail/ -s --tb=native -v --cov-report term-missing --cov-append smail/
 after_success:
   - codecov

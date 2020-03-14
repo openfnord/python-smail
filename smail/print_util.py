@@ -7,6 +7,7 @@ def bits_to_hex(bit_array, delimiter=":"):
     For example, [1,0,0,1,1,0,1,0,0,1,0] becomes 04:d2.
     Args:
         bit_array: the bit array to convert
+        delimiter: the delimiter to use (defaults to ":")
     Returns:
         the formatted hex string."""
     # Pad the first partial byte.
@@ -23,6 +24,7 @@ def bytes_to_hex(byte_string, delimiter=":"):
     '\x04\xd2' becomes 04:d2.
     Args:
         byte_string: the bytes to convert.
+        delimiter: the delimiter to use (defaults to ":")
     Returns:
         the formatted hex string."""
     return delimiter.join([("%02x" % ord(b)) for b in byte_string])
@@ -33,6 +35,7 @@ def int_to_hex(int_value, delimiter=":"):
     1234 (0x4d2) becomes 04:d2 and -1234 becomes ' -:04:d2'
     Args:
         int_value: the value to convert.
+        delimiter: the delimiter to use (defaults to ":")
     Returns:
         the formatted hex string."""
     hex_string = "%x" % int_value
@@ -49,6 +52,23 @@ def int_to_hex(int_value, delimiter=":"):
     return ret + delimiter.join(byte_values)
 
 
+def append_lines(lines, wrap, buf):
+    """Append lines to the buffer. If the first line can be appended to the last
+    line of the buf without exceeding wrap characters, the two lines are merged.
+    Args:
+        lines: an iterable of lines to append
+        wrap:  maximum number of characters per line. 0 or negative wrap means
+               no limit.
+        buf:   an iterable of lines to append to"""
+    if not lines:
+        return
+    if not buf or 0 < wrap < len(buf[-1]) + len(lines[0]):
+        buf += lines
+    else:
+        buf[-1] += lines[0]
+        buf += lines[1:]
+
+
 def wrap_lines(long_string, wrap):
     """Split the long string into line chunks according to the wrap limit and
     existing newlines.
@@ -60,7 +80,9 @@ def wrap_lines(long_string, wrap):
        a list of lines of at most |wrap| characters each."""
     if not long_string:
         return []
-    long_lines = long_string.decode("utf-8").split("\n")
+    if isinstance(long_string, bytes):
+        long_string = long_string.decode()
+    long_lines = long_string.split("\n")
     if wrap <= 0:
         return long_lines
     ret = []
@@ -71,20 +93,3 @@ def wrap_lines(long_string, wrap):
         else:
             ret += [line[i: i + wrap] for i in range(0, len(line), wrap)]
     return ret
-
-
-def append_lines(lines, wrap, buf):
-    """Append lines to the buffer. If the first line can be appended to the last
-    line of the buf without exceeding wrap characters, the two lines are merged.
-    Args:
-        lines: an iterable of lines to append
-        wrap:  maximum number of characters per line. 0 or negative wrap means
-               no limit.
-        buf:   an iterable of lines to append to"""
-    if not lines:
-        return
-    if not buf or wrap > 0 and len(buf[-1]) + len(lines[0]) > wrap:
-        buf += lines
-    else:
-        buf[-1] += lines[0]
-        buf += lines[1:]

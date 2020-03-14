@@ -2,8 +2,6 @@
 
 """X509 Certificate API."""
 
-from __future__ import unicode_literals
-
 import hashlib
 
 from asn1crypto import cms
@@ -200,27 +198,15 @@ class Certificate(object):
         )
 
 
-def certs_from_pem(pem_string):
-    """Read multiple PEM-encoded certificates from a string.
+def certs_from_pem(pem_byte_string):
+    """Read multiple PEM-encoded certificates from a byte string.
 
     Args:
-        pem_string: the certificate string.
+        pem_byte_string: the certificate byte string.
 
     Yields:
         Certificate objects.
     """
-    for _, _, der_bytes in pem.unarmor(pem_string, multiple=True):
+
+    for _, _, der_bytes in pem.unarmor(pem_byte_string.encode(), multiple=True):
         yield Certificate.from_der(der_bytes)
-
-
-def certs_from_pem_file(pem_file):
-    """Read multiple PEM-encoded certificates from a file.
-
-    Args:
-        pem_file: the certificate file.
-
-    Yields:
-        Certificate objects.
-    """
-    with open(pem_file, "rb") as certs_pem_file:
-        return certs_from_pem(certs_pem_file.read())
