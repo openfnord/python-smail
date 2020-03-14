@@ -1,11 +1,10 @@
 # _*_ coding: utf-8 _*_
 import os
-import subprocess
 import unittest
 from email import message_from_string
 from tempfile import mkstemp
 
-from .conftest import FIXTURE_DIR
+from .conftest import FIXTURE_DIR, get_cmd_output
 from smail.encrypt import encrypt
 
 
@@ -15,20 +14,6 @@ class EncryptTest(unittest.TestCase):
         self.openssl_binary = os.environ.get("OPENSSL_BINARY", None)
         if not self.openssl_binary:
             self.openssl_binary = "openssl"
-
-    @staticmethod
-    def get_cmd_output(args):
-        try:
-            result = subprocess.check_output(args, stderr=subprocess.STDOUT)
-
-        except subprocess.CalledProcessError as err:
-            raise Exception("Running shell command \"{}\" caused "
-                            "error: {} (RC: {}".format(err.cmd, err.output, err.returncode))
-
-        except Exception as err:
-            raise Exception("Error: {}".format(err))
-
-        return result.decode()
 
     def assert_message_to_carl(self, algorithm):
         message = [
@@ -46,15 +31,11 @@ class EncryptTest(unittest.TestCase):
         os.write(fd, result.encode())
 
         cmd = [
-            self.openssl_binary,
-            "smime",
-            "-decrypt",
-            "-in",
-            tmp_file,
-            "-inkey",
-            os.path.join(FIXTURE_DIR, 'CarlPrivRSASign.pem'),
+            self.openssl_binary, "smime", "-decrypt",
+            "-in", tmp_file,
+            "-inkey", os.path.join(FIXTURE_DIR, 'CarlPrivRSASign.pem'),
         ]
-        cmd_output = self.get_cmd_output(cmd)
+        cmd_output = get_cmd_output(cmd)
         private_message = message_from_string(cmd_output)
         payload = private_message.get_payload().splitlines()
 
@@ -89,15 +70,11 @@ class EncryptTest(unittest.TestCase):
         os.write(fd, result.encode())
 
         cmd = [
-            self.openssl_binary,
-            "smime",
-            "-decrypt",
-            "-in",
-            tmp_file,
-            "-inkey",
-            os.path.join(FIXTURE_DIR, 'CarlPrivRSASign.pem'),
+            self.openssl_binary, "smime", "-decrypt",
+            "-in", tmp_file,
+            "-inkey", os.path.join(FIXTURE_DIR, 'CarlPrivRSASign.pem'),
         ]
-        cmd_output = self.get_cmd_output(cmd)
+        cmd_output = get_cmd_output(cmd)
         private_message = message_from_string(cmd_output)
 
         self.assertEqual(("Hello,\n"
