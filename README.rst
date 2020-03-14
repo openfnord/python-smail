@@ -2,6 +2,8 @@
 Python SMAIL
 ============
 
+TODO(frennkie) Update this!
+
 .. warning::
     This package is pure fork version from https://github.com/balena/python-smime with immediate release version which contains some necessary refactoring.
     All credits go to original Author(s).
