@@ -1,0 +1,8 @@
+[html]
+directory = /tmp/htmlcov
+
+[run]
+omit =
+    .git
+    .tox
+    .eggs
