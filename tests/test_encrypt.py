@@ -4,8 +4,9 @@ import unittest
 from email import message_from_string
 from tempfile import mkstemp
 
-from .conftest import FIXTURE_DIR, get_cmd_output
+from .conftest import FIXTURE_DIR
 from smail.encrypt import encrypt
+from smail.cmd_util import get_cmd_output
 
 
 class EncryptTest(unittest.TestCase):

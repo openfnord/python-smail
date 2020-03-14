@@ -9,8 +9,9 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend as cryptography_backend
 from cryptography.hazmat.primitives import serialization
 
+from .conftest import FIXTURE_DIR
 from smail.sign import sign_bytes
-from .conftest import FIXTURE_DIR, get_cmd_output
+from smail.cmd_util import get_cmd_output
 
 
 class SignTest(unittest.TestCase):
