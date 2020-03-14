@@ -10,6 +10,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - ...
 
+0.3.0 (2020-03-14)
+------------------
+
+- remove: six
+
 0.2.2 (2020-03-14)
 ------------------
 

@@ -5,7 +5,6 @@ from copy import deepcopy
 from email import message_from_string
 from email.mime.text import MIMEText
 
-import six
 from asn1crypto import cms
 
 from .block import get_cipher
@@ -37,7 +36,7 @@ def encrypt(message, certs, algorithm="aes256_cbc"):
         raise ValueError("Unknown block algorithm")
 
     # Get the message content. This could be a string, or a message object
-    passed_as_str = isinstance(message, six.string_types)
+    passed_as_str = isinstance(message, str)
 
     if passed_as_str:
         message = message_from_string(message)
@@ -100,7 +99,7 @@ def encrypt(message, certs, algorithm="aes256_cbc"):
         result_msg[name] = value
 
     # adds header
-    for hrd, values in six.iteritems(headers):
+    for hrd, values in headers.items():
         for val in values:
             result_msg.add_header(hrd, val)
 

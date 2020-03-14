@@ -17,11 +17,11 @@ with open('smail/version.py') as f:
     __version__ = ''
     exec(f.read())  # set __version__
 
-test_requires = ['pytest', 'pytest-flake8', 'pytest-cov', 'coverage']
+test_requires = ['coverage', 'flake8', 'tox']
 setup(
     name='python-smail',
     version=__version__,
-    description='Python S/MIME Toolkit',
+    description='Simple S/MIME e-mails with Python3',
     long_description=README,
     url='https://gitlab.com/rhab/python-smail',
     author='Robert Habermann',
@@ -41,10 +41,10 @@ setup(
         'Topic :: Communications :: Email',
         'Topic :: Security :: Cryptography',
     ],
-    keywords='smime cryptography email',
+    keywords='smime cryptography email S/MIME encrypt sign',
     packages=find_packages(exclude=['tests', '*_test.py', 'test_*.py']),
     platforms=["all"],
-    install_requires=['cryptography', 'asn1crypto', 'six'],
+    install_requires=['cryptography', 'asn1crypto'],
     setup_requires=['pytest-runner'],
     tests_require=test_requires,
     test_suite='tests',
