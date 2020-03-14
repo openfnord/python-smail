@@ -1,5 +1,5 @@
 # _*_ coding: utf-8 _*_
-"""Refer to RFC3565"""
+
 from base64 import b64encode
 from copy import deepcopy
 from email import message_from_string

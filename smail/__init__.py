@@ -1,1 +1,1 @@
-from .encrypt import encrypt
+from .encrypt import encrypt  # noqa

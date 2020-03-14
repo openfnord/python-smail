@@ -1,16 +1,15 @@
-import email
-from email.mime.application import MIMEApplication
-from email.mime.image import MIMEImage
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+# _*_ coding: utf-8 _*_
 
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend as cryptography_backend
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.bindings.openssl.binding import Binding as SSLBinding
 
 
 def sign_bytes(cert, key, byte_string):
+    """sign_bytes
+
+    writen by kyrofa under Apache License 2.0 in:
+    https://github.com/ros2/sros2/pull/129/commits/cfb4381fc1bc45a4f3ea9aa7e92f5228c08a2d04
+
+    """
     # Using two flags here to get the output required:
     #   - PKCS7_DETACHED: Use cleartext signing
     #   - PKCS7_TEXT: Set the MIME headers for text/plain <- disabled to allow text/html
