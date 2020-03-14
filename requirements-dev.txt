@@ -1,4 +1,6 @@
+coverage<5.0.0
 flake8
-flake8-isort
-isort
-certifi
+flake8-quotes
+pytest
+pytest-cov
+tox

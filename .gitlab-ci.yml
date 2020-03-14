@@ -1,0 +1,39 @@
+before_script:
+  - pip install tox
+cache:
+  paths:
+  - /root/.cache
+stages:
+  - style
+  - test
+  - package
+
+py36:
+  stage: test
+  image: python:3.6
+  script:
+    - tox -e py36
+
+pep8:
+  image: python:3.6
+  stage: style
+  script:
+    - tox -e pep8
+
+wheel:
+  image: python:3.6
+  stage: package
+  script:
+    tox -e wheel
+  artifacts:
+    paths:
+      - dist/
+
+sdist:
+  image: python:3.6
+  stage: package
+  script:
+    tox -e sdist
+  artifacts:
+    paths:
+      - dist/

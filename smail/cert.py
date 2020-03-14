@@ -128,8 +128,7 @@ class Certificate(object):
             True or False.
         """
         return (
-            self._cert["tbs_certificate"]["issuer"]
-            == self._cert["tbs_certificate"]["subject"]
+            self._cert["tbs_certificate"]["issuer"] == self._cert["tbs_certificate"]["subject"]
         )
 
     def fingerprint(self, hashfunc="sha1"):
