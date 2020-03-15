@@ -207,5 +207,5 @@ def certs_from_pem(pem_byte_string):
         Certificate objects.
     """
 
-    for _, _, der_bytes in pem.unarmor(pem_byte_string.encode(), multiple=True):
+    for _, _, der_bytes in pem.unarmor(pem_byte_string, multiple=True):
         yield Certificate.from_der(der_bytes)

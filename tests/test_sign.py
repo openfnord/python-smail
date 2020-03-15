@@ -38,7 +38,7 @@ class SignTest(unittest.TestCase):
         msg = email.message_from_string("\n".join(message))
         self.assertIsInstance(msg, email.message.Message)
 
-        # load keys
+        # load cert & key
         with open(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem'), 'rb') as cert_file:
             cert = x509.load_pem_x509_certificate(
                 cert_file.read(), cryptography_backend())
@@ -47,7 +47,7 @@ class SignTest(unittest.TestCase):
             private_key = serialization.load_pem_private_key(
                 key_file.read(), None, cryptography_backend())
 
-        payload_signed = sign_bytes(cert, private_key, msg.as_bytes())
+        payload_signed = sign_bytes(msg.as_bytes(), cert, private_key)
         msg_signed = email.message_from_bytes(payload_signed)
 
         fd, tmp_file = mkstemp()

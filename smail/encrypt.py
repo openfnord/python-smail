@@ -2,7 +2,7 @@
 
 from base64 import b64encode
 from copy import deepcopy
-from email import message_from_string
+from email import message_from_string, message_from_bytes
 from email.mime.text import MIMEText
 
 from asn1crypto import cms
@@ -35,18 +35,26 @@ def encrypt(message, certs, algorithm="aes256_cbc"):
     if block_cipher is None:
         raise ValueError("Unknown block algorithm")
 
-    # Get the message content. This could be a string, or a message object
+    # Get the message content. This could be a string, bytes or a message object
     passed_as_str = isinstance(message, str)
 
     if passed_as_str:
         message = message_from_string(message)
+
+    passed_as_bytes = isinstance(message, bytes)
+    if passed_as_bytes:
+        message = message_from_bytes(message)
+
     # Extract the message payload without conversion, & the outermost MIME header / Content headers. This allows
     # the MIME content to be rendered for any outermost MIME type incl. multipart
     copied_msg = deepcopy(message)
 
     headers = {}
-    # bellows headers are wiped from cloned and would be added in newly created message instance
-    for hdr_name in ("Subject", "To", "BCC", "CC", "From"):
+    # besides some special ones (e.g. Content-Type) remove all headers before encrypting the body content
+    for hdr_name in copied_msg.keys():
+        if hdr_name in ["Content-Type", "MIME-Version", "Content-Transfer-Encoding"]:
+            continue
+
         values = copied_msg.get_all(hdr_name)
         if values:
             del copied_msg[hdr_name]
@@ -98,13 +106,15 @@ def encrypt(message, certs, algorithm="aes256_cbc"):
             del result_msg[name]
         result_msg[name] = value
 
-    # adds header
+    # add original headers
     for hrd, values in headers.items():
         for val in values:
             result_msg.add_header(hrd, val)
 
     # return the same type as was passed in
-    if passed_as_str:
+    if passed_as_bytes:
+        return result_msg.as_bytes()
+    elif passed_as_str:
         return result_msg.as_string()
     else:
         return result_msg

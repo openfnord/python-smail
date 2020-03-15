@@ -10,6 +10,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - ...
 
+0.4.0 (2020-03-16)
+------------------
+
+- add: sign_and_encrypt
+
 0.3.0 (2020-03-14)
 ------------------
 

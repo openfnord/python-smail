@@ -1,9 +1,66 @@
 # _*_ coding: utf-8 _*_
+from copy import deepcopy
+from email import message_from_string, message_from_bytes
 
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend as cryptography_backend
 from cryptography.hazmat.bindings.openssl.binding import Binding as SSLBinding
+from cryptography.hazmat.primitives import serialization
 
 
-def sign_bytes(cert, key, byte_string):
+def sign(message, cert, key):
+    # Get the message content. This could be a string, bytes or a message object
+    passed_as_str = isinstance(message, str)
+
+    if passed_as_str:
+        message = message_from_string(message)
+
+    passed_as_bytes = isinstance(message, bytes)
+    if passed_as_bytes:
+        message = message_from_bytes(message)
+
+    # Extract the message payload without conversion, & the outermost MIME header / Content headers. This allows
+    # the MIME content to be rendered for any outermost MIME type incl. multipart
+    copied_msg = deepcopy(message)
+
+    headers = {}
+    # besides some special ones (e.g. Content-Type) remove all headers before encrypting the body content
+    for hdr_name in copied_msg.keys():
+        if hdr_name in ["Content-Type", "MIME-Version", "Content-Transfer-Encoding"]:
+            continue
+
+        values = copied_msg.get_all(hdr_name)
+        if values:
+            del copied_msg[hdr_name]
+            headers[hdr_name] = values
+
+    content = copied_msg.as_bytes()
+
+    # load cert & keys
+    x509_cert = x509.load_pem_x509_certificate(cert, cryptography_backend())
+    private_key = serialization.load_pem_private_key(key, None, cryptography_backend())
+
+    # sign bytes and parse signed message
+    signed_bytes = sign_bytes(content, x509_cert, private_key)
+    signed_message = message_from_bytes(signed_bytes)
+
+    # add original headers
+    for hrd, values in headers.items():
+        for val in values:
+            try:
+                signed_message.replace_header(hrd, str(val))
+            except KeyError:
+                signed_message.add_header(hrd, str(val))
+
+    if passed_as_bytes:
+        return signed_message.as_bytes()
+    elif passed_as_str:
+        return signed_message.as_string()
+    else:
+        return signed_message
+
+
+def sign_bytes(byte_string, cert, key):
     """sign_bytes
 
     writen by kyrofa under Apache License 2.0 in:

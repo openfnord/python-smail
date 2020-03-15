@@ -25,7 +25,7 @@ class EncryptTest(unittest.TestCase):
             "Now you see me.",
         ]
 
-        with open(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem')) as cert:
+        with open(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem'), 'rb') as cert:
             result = encrypt("\n".join(message), cert.read(), algorithm=algorithm)
 
         fd, tmp_file = mkstemp()
@@ -64,7 +64,7 @@ class EncryptTest(unittest.TestCase):
             "\n"
             "Goodbye!",
         ]
-        with open(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem')) as cert:
+        with open(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem'), 'rb') as cert:
             result = encrypt("\n".join(message), cert.read(), algorithm="aes256_cbc")
 
         fd, tmp_file = mkstemp()
