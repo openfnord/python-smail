@@ -13,7 +13,7 @@ from .print_util import wrap_lines
 
 
 def __iterate_recipient_infos(certs, session_key):
-    if isinstance(certs, (tuple, list)):
+    if isinstance(certs, (list, set, tuple)):
         for cert_file in certs:
             for cert in certs_from_pem(cert_file):
                 recipient_info = cert.recipient_info(session_key)
@@ -109,7 +109,7 @@ def encrypt(message, certs, algorithm="aes256_cbc"):
     # add original headers
     for hrd, values in headers.items():
         for val in values:
-            result_msg.add_header(hrd, val)
+            result_msg.add_header(hrd, str(val))
 
     # return the same type as was passed in
     if passed_as_bytes:

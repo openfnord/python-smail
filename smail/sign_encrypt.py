@@ -43,7 +43,6 @@ def _pop_headers(msg, blacklist=None):
 def sign_and_encrypt(msg, sign_cert, sign_key, recipients_certs, algorithm="aes256_cbc"):
     # Get the message content. This could be a string, bytes or a message object
     passed_as_str = isinstance(msg, str)
-
     if passed_as_str:
         msg = message_from_string(msg)
 
