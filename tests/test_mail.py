@@ -22,6 +22,14 @@ class MailTest(unittest.TestCase):
         test_base_path = os.path.dirname(os.path.realpath(__file__))
         cls.test_dir = os.path.join(test_base_path, "..", "test_output")
 
+        if not os.path.exists(cls.test_dir):
+            os.mkdir(cls.test_dir)
+        else:
+            # directory exists - remove all files in it
+            file_list = [f for f in os.listdir(cls.test_dir)]
+            for f in file_list:
+                os.remove(os.path.join(cls.test_dir, f))
+
         try:
             copyfile(os.path.join(FIXTURE_DIR, "BobRSASignByCarl_password.p12"),
                      os.path.join(cls.test_dir, "BobRSASignByCarl_password.p12"))
@@ -33,14 +41,6 @@ class MailTest(unittest.TestCase):
                      os.path.join(cls.test_dir, "BobRSASignByCarl_password.txt"))
         except OSError:
             pass
-
-        if not os.path.exists(cls.test_dir):
-            os.mkdir(cls.test_dir)
-        else:
-            # directory exists - remove all files in it
-            file_list = [f for f in os.listdir(cls.test_dir)]
-            for f in file_list:
-                os.remove(os.path.join(cls.test_dir, f))
 
         # check and optionally set up mail sending
         cls.smtp_host = os.environ.get("SMAIL_SMTP_HOST", None)
@@ -111,7 +111,7 @@ class MailTest(unittest.TestCase):
     #     self.assertEqual(self.test_dir, "foobar")
 
     def test_plain_message(self):
-        file_path = os.path.join(self.test_dir, 'plain_text_message.eml')
+        file_path = os.path.join(self.test_dir, 'plain_message.eml')
 
         with open(file_path, 'wb') as f:
             f.write(self.plain_text_message.as_bytes())
