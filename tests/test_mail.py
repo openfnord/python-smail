@@ -18,10 +18,9 @@ from tests.fixtures import get_plain_text_message
 class MailTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # use tests/output/ as target for output files
+        # use test_output/ as target for output files
         test_base_path = os.path.dirname(os.path.realpath(__file__))
-
-        cls.test_dir = os.path.join(test_base_path, "output")
+        cls.test_dir = os.path.join(test_base_path, "..", "test_output")
 
         try:
             copyfile(os.path.join(FIXTURE_DIR, "BobRSASignByCarl_password.p12"),
