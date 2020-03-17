@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import shutil
-import tempfile
 import unittest
 import pytest
 from os import path, mkdir
