@@ -17,7 +17,7 @@ py36:
     - tox -e py36
   artifacts:
     paths:
-      - /tmp/python_smail_tests/
+      - tests/output/
     expire_in: 1 day
 
 pep8:
