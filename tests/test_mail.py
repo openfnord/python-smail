@@ -4,6 +4,7 @@ import os
 import smtplib
 import unittest
 from email.message import Message
+from shutil import copyfile
 
 import pytest
 
@@ -18,7 +19,21 @@ class MailTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # use tests/output/ as target for output files
-        cls.test_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "output")
+        test_base_path = os.path.dirname(os.path.realpath(__file__))
+
+        try:
+            copyfile(os.path.join(FIXTURE_DIR, "BobRSASignByCarl_password.p12"),
+                     os.path.join(test_base_path, "BobRSASignByCarl_password.p12"))
+        except OSError:
+            pass
+
+        try:
+            copyfile(os.path.join(FIXTURE_DIR, "BobRSASignByCarl_password.txt"),
+                     os.path.join(test_base_path, "BobRSASignByCarl_password.txt"))
+        except OSError:
+            pass
+
+        cls.test_dir = os.path.join(test_base_path, "output")
         if not os.path.exists(cls.test_dir):
             os.mkdir(cls.test_dir)
         else:

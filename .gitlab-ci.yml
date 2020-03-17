@@ -18,6 +18,8 @@ py36:
   artifacts:
     paths:
       - tests/output/
+      - tests/BobRSASignByCarl_password.p12
+      - tests/BobRSASignByCarl_password.txt
     expire_in: 1 day
 
 pep8:
