@@ -23,13 +23,13 @@ class MailTest(unittest.TestCase):
 
         try:
             copyfile(os.path.join(FIXTURE_DIR, "BobRSASignByCarl_password.p12"),
-                     os.path.join(test_base_path, "BobRSASignByCarl_password.p12"))
+                     os.path.join(test_base_path, "output", "BobRSASignByCarl_password.p12"))
         except OSError:
             pass
 
         try:
             copyfile(os.path.join(FIXTURE_DIR, "BobRSASignByCarl_password.txt"),
-                     os.path.join(test_base_path, "BobRSASignByCarl_password.txt"))
+                     os.path.join(test_base_path, "output", "BobRSASignByCarl_password.txt"))
         except OSError:
             pass
 
