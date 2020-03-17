@@ -15,7 +15,7 @@ py36:
     - tox -e py36
   artifacts:
     paths:
-      - /tmp/python_smail_*/
+      - /tmp/python_smail_tests/
 
 pep8:
   image: python:3.6

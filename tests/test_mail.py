@@ -2,7 +2,7 @@
 import tempfile
 import unittest
 import pytest
-from os import path
+from os import path, mkdir
 
 from tests.fixtures import get_plain_text_message
 
@@ -11,7 +11,10 @@ class MailTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Create a temporary directory
-        cls.test_dir = tempfile.mkdtemp(prefix="python_smail_")
+        # cls.test_dir = tempfile.mkdtemp(prefix="python_smail_")
+        cls.test_dir = path.join(tempfile.gettempdir(), "python_smail_tests")
+        if not path.exists(cls.test_dir):
+            mkdir(cls.test_dir)
 
     # def tearDown(self):
     #     # Remove the directory after the test
