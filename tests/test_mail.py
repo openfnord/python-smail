@@ -16,12 +16,9 @@ class MailTest(unittest.TestCase):
             os.mkdir(cls.test_dir)
         else:
             # directory exists - remove all files in it
-            for file_object in os.listdir(cls.test_dir):
-                file_object_path = os.path.join(cls.test_dir, file_object)
-                if os.path.isfile(file_object_path) or os.path.islink(file_object_path):
-                    os.unlink(file_object_path)
-                else:
-                    shutil.rmtree(file_object_path)
+            file_list = [f for f in os.listdir(cls.test_dir)]
+            for f in file_list:
+                os.remove(os.path.join(cls.test_dir, f))
 
     # def tearDown(self):
     #     # Remove the directory after the test
