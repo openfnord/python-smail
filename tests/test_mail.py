@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import shutil
 import tempfile
 import unittest
 import pytest
@@ -11,9 +12,10 @@ class MailTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Create a temporary directory
-        # cls.test_dir = tempfile.mkdtemp(prefix="python_smail_")
         cls.test_dir = path.join(tempfile.gettempdir(), "python_smail_tests")
-        if not path.exists(cls.test_dir):
+        if path.exists(cls.test_dir):
+            shutil.rmtree(cls.test_dir)
+        else:
             mkdir(cls.test_dir)
 
     # def tearDown(self):
@@ -38,6 +40,10 @@ class MailTest(unittest.TestCase):
         # Reopen the file and check if what we read back is the same
         with open(file_path) as f:
             self.assertEqual(f.read(), 'The owls are not what they seem1')
+
+    def test_dir_path(self):
+        # Create a file path
+        self.assertEqual(self.test_dir, 'test1.txt')
 
     def test_plain_text_message(self):
         file_path = path.join(self.test_dir, 'plain_text_message.eml')
