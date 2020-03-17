@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
-import shutil
-import unittest
-import pytest
+import email
 import os
+import smtplib
+import unittest
+from email.message import Message
+
+import pytest
 
 from tests.fixtures import get_plain_text_message
 
@@ -20,10 +23,49 @@ class MailTest(unittest.TestCase):
             for f in file_list:
                 os.remove(os.path.join(cls.test_dir, f))
 
-    # def tearDown(self):
-    #     # Remove the directory after the test
-    #     # shutil.rmtree(self.test_dir)
-    #     pass
+        # check and optionally set up mail sending
+        cls.smtp_host = os.environ.get("SMAIL_SMTP_HOST", None)
+        cls.smtp_port = os.environ.get("SMAIL_SMTP_PORT", None)
+        cls.smtp_user = os.environ.get("SMAIL_SMTP_USER", None)
+        cls.smtp_pass = os.environ.get("SMAIL_SMTP_PASS", None)
+
+    def tearDown(self):
+        file_list = [f for f in os.listdir(self.test_dir)]
+        self.assertListEqual(file_list, [
+            "plain_text_message.eml"
+        ])
+
+        # (re-)check that everything is a "Message"
+        msgs = []
+        for f_name in file_list:
+            with open(os.path.join(self.test_dir, f_name), 'rb') as f:
+                msg = email.message_from_bytes(f.read())
+                self.assertIsInstance(msg, Message)
+                msgs.append(msg)
+
+        self.send_messages(msgs)
+
+    def send_messages(self, msgs):
+        if not self.smtp_host:
+            return
+
+        # ok - SMTP is configured via ENVIRONMENT
+        with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+            for msg in msgs:
+                for header in msg.items():
+                    # make sure that these are not "example.com" tests messages
+                    if header[0].lower() == "to":
+                        self.assertTrue("example.com" not in str(header[1]))
+
+                    if header[0].lower() == "from":
+                        self.assertTrue("example.com" not in str(header[1]))
+
+                # after headers - check and attempt login
+                if self.smtp_user and self.smtp_pass:
+                    server.login(self.smtp_user, self.smtp_pass)
+
+                # now send the message
+                server.send_message(msg)
 
     @classmethod
     @pytest.fixture(scope='class', autouse=True)
@@ -50,7 +92,6 @@ class MailTest(unittest.TestCase):
     def test_plain_text_message(self):
         file_path = os.path.join(self.test_dir, 'plain_text_message.eml')
 
-        # Create a file in the temporary directory
         with open(file_path, 'wb') as f:
             # Write something to it
             f.write(self.plain_text_message.as_bytes())
