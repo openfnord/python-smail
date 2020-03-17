@@ -17,7 +17,7 @@ py36:
     - tox -e py36
   artifacts:
     paths:
-      - tests/output/
+      - test_output/
     expire_in: 1 day
 
 pep8:
