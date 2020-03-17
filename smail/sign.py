@@ -8,7 +8,7 @@ from cryptography.hazmat.bindings.openssl.binding import Binding as SSLBinding
 from cryptography.hazmat.primitives import serialization
 
 
-def sign(message, cert, key):
+def sign(message, cert_signer, key_signer):
     # Get the message content. This could be a string, bytes or a message object
     passed_as_str = isinstance(message, str)
 
@@ -37,8 +37,8 @@ def sign(message, cert, key):
     content = copied_msg.as_bytes()
 
     # load cert & keys
-    x509_cert = x509.load_pem_x509_certificate(cert, cryptography_backend())
-    private_key = serialization.load_pem_private_key(key, None, cryptography_backend())
+    x509_cert = x509.load_pem_x509_certificate(cert_signer, cryptography_backend())
+    private_key = serialization.load_pem_private_key(key_signer, None, cryptography_backend())
 
     # sign bytes and parse signed message
     signed_bytes = sign_bytes(content, x509_cert, private_key)

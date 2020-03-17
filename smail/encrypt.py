@@ -24,7 +24,7 @@ def __iterate_recipient_infos(certs, session_key):
             yield recipient_info
 
 
-def encrypt(message, certs, algorithm="aes256_cbc"):
+def encrypt(message, certs_recipients, algorithm="aes256_cbc"):
     """
     Takes the contents of the message parameter, formatted as in RFC 2822 (type str or message), and encrypts them,
     so that they can only be read by the intended recipient specified by pubkey.
@@ -63,7 +63,7 @@ def encrypt(message, certs, algorithm="aes256_cbc"):
     content = copied_msg.as_string()
     recipient_infos = []
 
-    for recipient_info in __iterate_recipient_infos(certs, block_cipher.session_key):
+    for recipient_info in __iterate_recipient_infos(certs_recipients, block_cipher.session_key):
         if recipient_info is None:
             raise ValueError("Unknown public-key algorithm")
         recipient_infos.append(recipient_info)
@@ -99,7 +99,7 @@ def encrypt(message, certs, algorithm="aes256_cbc"):
     for name, value in list(copied_msg.items()):
         if name in [x for x, _ in overrides]:
             continue
-        result_msg.add_header(name, value)
+        result_msg.add_header(name, str(value))
 
     for name, value in overrides:
         if name in result_msg:

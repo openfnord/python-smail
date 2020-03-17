@@ -40,27 +40,27 @@ def _pop_headers(msg, blacklist=None):
     return headers
 
 
-def sign_and_encrypt(msg, sign_cert, sign_key, recipients_certs, algorithm="aes256_cbc"):
+def sign_and_encrypt(message, cert_signer, key_signer, certs_recipients, algorithm="aes256_cbc"):
     # Get the message content. This could be a string, bytes or a message object
-    passed_as_str = isinstance(msg, str)
+    passed_as_str = isinstance(message, str)
     if passed_as_str:
-        msg = message_from_string(msg)
+        message = message_from_string(message)
 
-    passed_as_bytes = isinstance(msg, bytes)
+    passed_as_bytes = isinstance(message, bytes)
     if passed_as_bytes:
-        msg = message_from_bytes(msg)
+        message = message_from_bytes(message)
 
-    popped_headers = _pop_headers(msg)
+    popped_headers = _pop_headers(message)
 
-    if isinstance(msg, MIMEMultipart):
-        payload = b''.join([x.as_bytes() for x in msg.get_payload()])
-    elif isinstance(msg, MIMEText):
+    if isinstance(message, MIMEMultipart):
+        payload = b''.join([x.as_bytes() for x in message.get_payload()])
+    elif isinstance(message, MIMEText):
         # ensure that we have bytes
-        payload = msg.get_payload().encode()
-    elif isinstance(msg, str):
-        payload = msg.encode()
+        payload = message.get_payload().encode()
+    elif isinstance(message, str):
+        payload = message.encode()
     else:
-        payload = msg.as_bytes()
+        payload = message.as_bytes()
 
     # print("---")
     # print("Payload")
@@ -68,39 +68,39 @@ def sign_and_encrypt(msg, sign_cert, sign_key, recipients_certs, algorithm="aes2
     # print(payload)
     # print("---")
 
-    payload_signed = sign(payload, sign_cert, sign_key)
-    msg_signed = email.message_from_bytes(payload_signed)
+    payload_signed = sign(payload, cert_signer, key_signer)
+    message_signed = email.message_from_bytes(payload_signed)
 
     # print("---")
     # print("Signed")
-    # print(type(msg_signed))
-    # print(msg_signed)
+    # print(type(message_signed))
+    # print(message_signed)
     # print("---")
 
     for header in popped_headers:
         try:
-            msg_signed.replace_header(header[0], header[1])
+            message_signed.replace_header(header[0], str(header[1]))
         except KeyError:
-            msg_signed.add_header(header[0], header[1])
+            message_signed.add_header(header[0], str(header[1]))
 
     # print("---")
     # print("Signed+Headers")
-    # print(type(msg_signed))
-    # print(msg_signed)
+    # print(type(message_signed))
+    # print(message_signed)
     # print("---")
 
-    with open(recipients_certs[0], 'rb') as pem:  # TODO(frennkie) allow multiple
-        msg_signed_enveloped = encrypt(msg_signed, pem.read(), algorithm=algorithm)
+    with open(certs_recipients[0], 'rb') as pem:  # TODO(frennkie) allow multiple
+        message_signed_enveloped = encrypt(message_signed, pem.read(), algorithm=algorithm)
 
     # print("---")
     # print("Signed+Enveloped")
-    # print(type(msg_signed_enveloped))
-    # print(msg_signed_enveloped)
+    # print(type(message_signed_enveloped))
+    # print(message_signed_enveloped)
     # print("---")
 
     if passed_as_bytes:
-        return msg_signed_enveloped.as_bytes()
+        return message_signed_enveloped.as_bytes()
     elif passed_as_str:
-        return msg_signed_enveloped.as_string()
+        return message_signed_enveloped.as_string()
     else:
-        return msg_signed_enveloped
+        return message_signed_enveloped

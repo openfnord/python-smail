@@ -8,6 +8,9 @@ from asn1crypto import cms
 from asn1crypto import pem
 from asn1crypto import x509
 
+from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
+from cryptography.hazmat.backends import default_backend as cryptography_backend
+
 from .pubkey import RSAPublicKeyCipher
 
 
@@ -128,7 +131,7 @@ class Certificate(object):
             True or False.
         """
         return (
-            self._cert["tbs_certificate"]["issuer"] == self._cert["tbs_certificate"]["subject"]
+                self._cert["tbs_certificate"]["issuer"] == self._cert["tbs_certificate"]["subject"]
         )
 
     def fingerprint(self, hashfunc="sha1"):
@@ -209,3 +212,29 @@ def certs_from_pem(pem_byte_string):
 
     for _, _, der_bytes in pem.unarmor(pem_byte_string, multiple=True):
         yield Certificate.from_der(der_bytes)
+
+
+def key_and_certs_from_pkcs12(data, password):
+    """Load key, cert and additional certs from pkcs12 file
+
+    PKCS12 is a binary format described in RFC 7292. It can contain
+    certificates, keys, and more. PKCS12 files commonly have a pfx or
+    p12 file suffix.
+
+    Args:
+        data (bytes-like) – The binary data.
+        password (bytes-like) – The password to use to decrypt the data. None
+            if the PKCS12 is not encrypted.
+
+    :Returns:
+        A tuple of (private_key, certificate, additional_certificates). private_key
+            is a private key type or None, certificate is either the Certificate whose
+            public key matches the private key in the PKCS 12 object or None, and
+            additional_certificates is a list of all other Certificate instances in the
+            PKCS12 object.
+    """
+
+    if isinstance(password, str):
+        password = password.encode()
+
+    return load_key_and_certificates(data, password, cryptography_backend())

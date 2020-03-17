@@ -1,16 +1,13 @@
 # _*_ coding: utf-8 _*_
-import os
-import pytest
-
-BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from email.mime.text import MIMEText
+from email.utils import formatdate
 
 
-@pytest.fixture(scope='module')
-def base_settings():
-    # TODO(frennkie) remove this
-    settings = dict()
-    settings['testdata_dir'] = os.path.join(BASE_PATH, 'testdata')
-    settings['carl_public_certificate'] = os.path.join(settings['testdata_dir'], 'CarlRSASelf.pem')
-    settings['carl_private_certificate'] = os.path.join(settings['testdata_dir'], 'CarlPrivRSASign.pem')
+def get_plain_text_message():
+    message = MIMEText("This a plain text body!")
+    message['Date'] = formatdate(localtime=True)
+    message['From'] = "bar@example.com"
+    message['To'] = "foo@example.com"
+    message['Subject'] = "Plain Text Message"
 
-    yield settings
+    return message
