@@ -12,7 +12,7 @@ class MailTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Create a temporary directory
-        cls.test_dir = path.join(tempfile.gettempdir(), "python_smail_tests")
+        cls.test_dir = path.join(path.dirname(path.realpath(__file__)), "output")
         if path.exists(cls.test_dir):
             shutil.rmtree(cls.test_dir)
         else:
@@ -45,6 +45,7 @@ class MailTest(unittest.TestCase):
         # Create a file path
         self.assertTrue(path.exists(self.test_dir))
         self.assertTrue(path.isdir(self.test_dir))
+        self.assertEqual(self.test_dir, "foobar")
 
     def test_plain_text_message(self):
         file_path = path.join(self.test_dir, 'plain_text_message.eml')
