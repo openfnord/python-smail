@@ -10,14 +10,6 @@ The foundation of python-smail is the `cryptography`_ library which provides acc
 and implements many high and low level functionality. Additionally `asn1crypto`_ is used which is *"A fast, pure
 Python library for parsing and serializing ASN.1 structures."*.
 
-The ASN.1 implementation does not depend on pyasn1, as it showed too broken for
-creating and reading CMS (Cryptographic Message Syntax). Instead, the
-`asn1crypto`_ was used in this project.
-
-This implementation does not use the deprecated `pycrypto` anymore; instead it
-was switched to the more modern `cryptography` library. It is not 'pure python'
-anymore (because of the latter dependency), but at least works.
-
 
 Requirements
 ------------
