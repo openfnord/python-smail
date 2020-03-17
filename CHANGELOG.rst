@@ -10,6 +10,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - ...
 
+0.5.0 (2020-03-17)
+------------------
+
+- add: rewrite of README.rst
+- add: unittests
+
 0.4.0 (2020-03-16)
 ------------------
 
