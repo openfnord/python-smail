@@ -43,7 +43,8 @@ class MailTest(unittest.TestCase):
 
     def test_dir_path(self):
         # Create a file path
-        self.assertEqual(self.test_dir, 'test1.txt')
+        self.assertTrue(path.exists(self.test_dir))
+        self.assertTrue(path.isdir(self.test_dir))
 
     def test_plain_text_message(self):
         file_path = path.join(self.test_dir, 'plain_text_message.eml')

@@ -1,8 +1,10 @@
 before_script:
   - pip install tox
+
 cache:
   paths:
   - /root/.cache
+
 stages:
   - style
   - test
@@ -16,6 +18,7 @@ py36:
   artifacts:
     paths:
       - /tmp/python_smail_tests/
+    expire_in: 1 day
 
 pep8:
   image: python:3.6
