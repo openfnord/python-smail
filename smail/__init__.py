@@ -1,2 +1,4 @@
-from .encrypt import encrypt  # noqa
+from .encrypt import encrypt_message  # noqa
+from .sign import sign_message  # noqa
+from .sign_encrypt import sign_and_encrypt_message  # noqa
 from .cert import key_and_certs_from_pkcs12  # noqa

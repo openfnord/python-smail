@@ -7,6 +7,10 @@ from email.message import Message
 
 import pytest
 
+from smail import sign_message
+from smail import encrypt_message
+from smail import sign_and_encrypt_message
+from tests.conftest import FIXTURE_DIR
 from tests.fixtures import get_plain_text_message
 
 
@@ -31,9 +35,10 @@ class MailTest(unittest.TestCase):
 
     def tearDown(self):
         file_list = [f for f in os.listdir(self.test_dir)]
-        self.assertListEqual(file_list, [
-            "plain_text_message.eml"
-        ])
+        # self.assertListEqual(file_list, [
+        #     "plain_text_message.eml",
+        #     "plain_text_message_signed_by_bob.eml"
+        # ])
 
         # (re-)check that everything is a "Message"
         msgs = []
@@ -51,20 +56,21 @@ class MailTest(unittest.TestCase):
 
         # ok - SMTP is configured via ENVIRONMENT
         with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+            # if credentials were supplied then login
+            if self.smtp_user and self.smtp_pass:
+                server.login(self.smtp_user, self.smtp_pass)
+
+            # now loop over messages s
             for msg in msgs:
                 for header in msg.items():
-                    # make sure that these are not "example.com" tests messages
+                    # make sure that this is not a "example.com" test message
                     if header[0].lower() == "to":
                         self.assertTrue("example.com" not in str(header[1]))
 
                     if header[0].lower() == "from":
                         self.assertTrue("example.com" not in str(header[1]))
 
-                # after headers - check and attempt login
-                if self.smtp_user and self.smtp_pass:
-                    server.login(self.smtp_user, self.smtp_pass)
-
-                # now send the message
+                # finally send the message
                 server.send_message(msg)
 
     @classmethod
@@ -89,12 +95,55 @@ class MailTest(unittest.TestCase):
     #     # Create a file path
     #     self.assertEqual(self.test_dir, "foobar")
 
-    def test_plain_text_message(self):
+    def test_plain_message(self):
         file_path = os.path.join(self.test_dir, 'plain_text_message.eml')
 
         with open(file_path, 'wb') as f:
-            # Write something to it
             f.write(self.plain_text_message.as_bytes())
+
+    def test_plain_message_signed_by_alice(self):
+        file_path = os.path.join(self.test_dir, 'plain_message_signed_by_alice.eml')
+
+        with open(os.path.join(FIXTURE_DIR, 'AliceRSASignByCarl.pem'), 'rb') as cert_signer_file:
+            cert_signer = cert_signer_file.read()
+
+        with open(os.path.join(FIXTURE_DIR, 'AlicePrivRSASign.pem'), 'rb') as key_signer_file:
+            key_signer = key_signer_file.read()
+
+        signed_message = sign_message(self.plain_text_message, cert_signer, key_signer)
+
+        with open(file_path, 'wb') as f:
+            f.write(signed_message.as_bytes())
+
+    def test_plain_message_encrypted_for_bob(self):
+        file_path = os.path.join(self.test_dir, 'plain_message_encrypted_for_bob.eml')
+
+        with open(os.path.join(FIXTURE_DIR, 'BobRSASignByCarl.pem'), 'rb') as cert_file:
+            cert = cert_file.read()
+
+        encrypted_message = encrypt_message(self.plain_text_message, certs_recipients=cert)
+
+        with open(file_path, 'wb') as f:
+            f.write(encrypted_message.as_bytes())
+
+    def test_plain_message_signed_by_alice_encrypted_for_bob(self):
+        file_path = os.path.join(self.test_dir, 'plain_message_signed_by_alice_encrypted_for_bob.eml')
+
+        with open(os.path.join(FIXTURE_DIR, 'AliceRSASignByCarl.pem'), 'rb') as cert_signer_file:
+            cert_signer = cert_signer_file.read()
+
+        with open(os.path.join(FIXTURE_DIR, 'AlicePrivRSASign.pem'), 'rb') as key_signer_file:
+            key_signer = key_signer_file.read()
+
+        with open(os.path.join(FIXTURE_DIR, 'BobRSASignByCarl.pem'), 'rb') as cert_file:
+            cert = cert_file.read()
+
+        signed_encrypted_message = sign_and_encrypt_message(self.plain_text_message,
+                                                            cert_signer, key_signer,
+                                                            cert)
+
+        with open(file_path, 'wb') as f:
+            f.write(signed_encrypted_message.as_bytes())
 
 
 if __name__ == "__main__":

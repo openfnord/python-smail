@@ -8,7 +8,7 @@ from cryptography.hazmat.bindings.openssl.binding import Binding as SSLBinding
 from cryptography.hazmat.primitives import serialization
 
 
-def sign(message, cert_signer, key_signer):
+def sign_message(message, cert_signer, key_signer):
     # Get the message content. This could be a string, bytes or a message object
     passed_as_str = isinstance(message, str)
 
@@ -25,7 +25,7 @@ def sign(message, cert_signer, key_signer):
 
     headers = {}
     # besides some special ones (e.g. Content-Type) remove all headers before encrypting the body content
-    for hdr_name in copied_msg.keys():
+    for hdr_name in list(copied_msg.keys()):
         if hdr_name in ["Content-Type", "MIME-Version", "Content-Transfer-Encoding"]:
             continue
 

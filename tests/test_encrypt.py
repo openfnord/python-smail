@@ -5,7 +5,7 @@ from email import message_from_string
 from tempfile import mkstemp
 
 from .conftest import FIXTURE_DIR
-from smail.encrypt import encrypt
+from smail.encrypt import encrypt_message
 from smail.cmd_util import get_cmd_output
 
 
@@ -26,7 +26,7 @@ class EncryptTest(unittest.TestCase):
         ]
 
         with open(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem'), 'rb') as cert:
-            result = encrypt("\n".join(message), cert.read(), algorithm=algorithm)
+            result = encrypt_message("\n".join(message), cert.read(), algorithm=algorithm)
 
         fd, tmp_file = mkstemp()
         os.write(fd, result.encode())
@@ -65,7 +65,7 @@ class EncryptTest(unittest.TestCase):
             "Goodbye!",
         ]
         with open(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem'), 'rb') as cert:
-            result = encrypt("\n".join(message), cert.read(), algorithm="aes256_cbc")
+            result = encrypt_message("\n".join(message), cert.read(), algorithm="aes256_cbc")
 
         fd, tmp_file = mkstemp()
         os.write(fd, result.encode())

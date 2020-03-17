@@ -4,8 +4,8 @@ from email.header import Header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from smail import encrypt
-from smail.sign import sign
+from smail.encrypt import encrypt_message
+from smail.sign import sign_message
 
 
 def _pop_headers(msg, blacklist=None):
@@ -40,7 +40,7 @@ def _pop_headers(msg, blacklist=None):
     return headers
 
 
-def sign_and_encrypt(message, cert_signer, key_signer, certs_recipients, algorithm="aes256_cbc"):
+def sign_and_encrypt_message(message, cert_signer, key_signer, certs_recipients, algorithm="aes256_cbc"):
     # Get the message content. This could be a string, bytes or a message object
     passed_as_str = isinstance(message, str)
     if passed_as_str:
@@ -68,7 +68,7 @@ def sign_and_encrypt(message, cert_signer, key_signer, certs_recipients, algorit
     # print(payload)
     # print("---")
 
-    payload_signed = sign(payload, cert_signer, key_signer)
+    payload_signed = sign_message(payload, cert_signer, key_signer)
     message_signed = email.message_from_bytes(payload_signed)
 
     # print("---")
@@ -89,8 +89,7 @@ def sign_and_encrypt(message, cert_signer, key_signer, certs_recipients, algorit
     # print(message_signed)
     # print("---")
 
-    with open(certs_recipients[0], 'rb') as pem:  # TODO(frennkie) allow multiple
-        message_signed_enveloped = encrypt(message_signed, pem.read(), algorithm=algorithm)
+    message_signed_enveloped = encrypt_message(message_signed, certs_recipients, algorithm=algorithm)
 
     # print("---")
     # print("Signed+Enveloped")
