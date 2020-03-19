@@ -1,4 +1,5 @@
 import email
+from copy import deepcopy
 from email import message_from_bytes, message_from_string
 from email.header import Header
 from email.mime.multipart import MIMEMultipart
@@ -50,17 +51,21 @@ def sign_and_encrypt_message(message, cert_signer, key_signer, certs_recipients,
     if passed_as_bytes:
         message = message_from_bytes(message)
 
-    popped_headers = _pop_headers(message)
+    # Extract the message payload without conversion, & the outermost MIME header / Content headers. This allows
+    # the MIME content to be rendered for any outermost MIME type incl. multipart
+    copied_msg = deepcopy(message)
 
-    if isinstance(message, MIMEMultipart):
-        payload = b''.join([x.as_bytes() for x in message.get_payload()])
-    elif isinstance(message, MIMEText):
+    popped_headers = _pop_headers(copied_msg)
+
+    if isinstance(copied_msg, MIMEMultipart):
+        payload = b''.join([x.as_bytes() for x in copied_msg.get_payload()])
+    elif isinstance(copied_msg, MIMEText):
         # ensure that we have bytes
-        payload = message.get_payload().encode()
-    elif isinstance(message, str):
-        payload = message.encode()
+        payload = copied_msg.get_payload().encode()
+    elif isinstance(copied_msg, str):
+        payload = copied_msg.encode()
     else:
-        payload = message.as_bytes()
+        payload = copied_msg.as_bytes()
 
     # print("---")
     # print("Payload")

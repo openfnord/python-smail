@@ -69,10 +69,12 @@ def sign_bytes(byte_string, cert, key):
     """
     # Using two flags here to get the output required:
     #   - PKCS7_DETACHED: Use cleartext signing
-    #   - PKCS7_TEXT: Set the MIME headers for text/plain <- disabled to allow text/html
-    # flags = 0
-    flags = SSLBinding.lib.PKCS7_DETACHED
+    #   - PKCS7_TEXT: Set the MIME headers for text/plain
+    # flags = SSLBinding.lib.PKCS7_DETACHED
     # flags |= SSLBinding.lib.PKCS7_TEXT
+
+    # Only using PKCS7_DETACHED
+    flags = SSLBinding.lib.PKCS7_DETACHED
 
     # Convert the byte string into a buffer for SSL
     bio_in = SSLBinding.lib.BIO_new_mem_buf(byte_string, len(byte_string))

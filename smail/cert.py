@@ -7,6 +7,7 @@ import hashlib
 from asn1crypto import cms
 from asn1crypto import pem
 from asn1crypto import x509
+from cryptography.hazmat.primitives import serialization
 
 from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
 from cryptography.hazmat.backends import default_backend as cryptography_backend
@@ -55,31 +56,31 @@ class Certificate(object):
         return self._cert.debug()
 
     @classmethod
-    def from_pem(cls, pem_string):
-        """Read a single PEM-encoded certificate from a string.
+    def from_pem(cls, byte_string):
+        """Read a single PEM-encoded certificate from a byte string.
 
         Args:
-            pem_string: the certificate string.
+            byte_string: the certificate string.
 
         Returns:
             a Certificate object.
         """
-        _, _, der_bytes = pem.unarmor(pem_string)
+        _, _, der_bytes = pem.unarmor(byte_string)
         return cls.from_der(der_bytes)
 
     @classmethod
-    def from_der(cls, der_string):
-        """Read a single DER-encoded certificate from a string.
+    def from_der(cls, byte_string):
+        """Read a single DER-encoded certificate from a byte rstring.
 
         This is just an alias to __init__ to match from_pem().
 
         Args:
-            der_string: the certificate string.
+            byte_string: the certificate string.
 
         Returns:
             a Certificate object.
         """
-        return cls(der_string)
+        return cls(byte_string)
 
     @classmethod
     def from_pem_file(cls, pem_file):
@@ -237,4 +238,11 @@ def key_and_certs_from_pkcs12(data, password):
     if isinstance(password, str):
         password = password.encode()
 
-    return load_key_and_certificates(data, password, cryptography_backend())
+    key, cert_x509, add_certs_x509 = load_key_and_certificates(data, password, cryptography_backend())
+
+    cert = Certificate.from_pem(cert_x509.public_bytes(serialization.Encoding.PEM))
+    add_certs = [Certificate.from_pem(x.public_bytes(serialization.Encoding.PEM))
+                 for x in add_certs_x509]
+
+    return key, cert, add_certs
+
