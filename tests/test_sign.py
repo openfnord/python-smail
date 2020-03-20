@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives import serialization
 
 from .conftest import FIXTURE_DIR
 from smail.sign import sign_bytes
-from smail.cmd_util import get_cmd_output
+from smail.utils import get_cmd_output
 
 
 class SignTest(unittest.TestCase):

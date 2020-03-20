@@ -3,22 +3,57 @@
 """X509 Certificate API."""
 
 import hashlib
+from abc import ABCMeta
+from abc import abstractmethod
 
 from asn1crypto import cms
 from asn1crypto import pem
 from asn1crypto import x509
-from cryptography.hazmat.primitives import serialization
-
-from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
+from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.backends import default_backend as cryptography_backend
-
-from .pubkey import RSAPublicKeyCipher
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
 
 
 class CertificateError(Exception):
     """Certificate has errors."""
 
     pass
+
+
+class PublicKeyCipher(object):
+    __metaclass__ = ABCMeta
+
+    algo = None
+
+    @abstractmethod
+    def encrypt(self, session_key):
+        return NotImplemented
+
+    @property
+    def parameters(self):
+        return NotImplemented
+
+
+class RSAPublicKeyCipher(PublicKeyCipher):
+    algo = "rsa"
+
+    def __init__(self, public_key_info):
+        rsaparams = public_key_info["public_key"].native
+        key = rsa.RSAPublicNumbers(rsaparams["public_exponent"], rsaparams["modulus"])
+        backend = default_backend()
+        self._cipher = key.public_key(backend)
+        self._padding = padding.PKCS1v15()
+
+    def encrypt(self, session_key):
+        return self._cipher.encrypt(session_key, self._padding)
+
+    @property
+    def parameters(self):
+        # AlgorithmIdentifier parameters is always NULL
+        return None
 
 
 class Certificate(object):
@@ -245,4 +280,3 @@ def key_and_certs_from_pkcs12(data, password):
                  for x in add_certs_x509]
 
     return key, cert, add_certs
-

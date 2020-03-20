@@ -9,7 +9,7 @@ from asn1crypto import cms
 
 from .block import get_cipher
 from .cert import certs_from_pem
-from .print_util import wrap_lines
+from .utils import wrap_lines
 
 
 def __iterate_recipient_infos(certs, session_key):

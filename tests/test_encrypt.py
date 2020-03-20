@@ -6,7 +6,7 @@ from tempfile import mkstemp
 
 from .conftest import FIXTURE_DIR
 from smail.encrypt import encrypt_message
-from smail.cmd_util import get_cmd_output
+from smail.utils import get_cmd_output
 
 
 class EncryptTest(unittest.TestCase):
