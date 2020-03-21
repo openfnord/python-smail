@@ -45,9 +45,6 @@ class EncryptTest(unittest.TestCase):
     def test_message_to_carl_aes256_cbc(self, ):
         self.assert_message_to_carl("aes256_cbc")
 
-    def test_message_to_carl_aes192_cbc(self):
-        self.assert_message_to_carl("aes192_cbc")
-
     def test_message_to_carl_aes128_cbc(self):
         self.assert_message_to_carl("aes128_cbc")
 

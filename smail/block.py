@@ -73,7 +73,6 @@ class AES(BlockCipher):
 def get_cipher(algorithm):
     _algorithms = {
         "aes128_cbc": (AES, (modes.CBC, 16)),
-        "aes192_cbc": (AES, (modes.CBC, 24)),
         "aes256_cbc": (AES, (modes.CBC, 32)),
     }
     if algorithm in _algorithms:
