@@ -1,2 +1,3 @@
-cryptography
 asn1crypto
+cryptography
+oscrypto
