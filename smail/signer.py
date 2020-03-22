@@ -31,7 +31,8 @@ SOFTWARE.
 import hashlib
 from datetime import datetime, timezone
 
-from asn1crypto import cms, algos, core, keys, pem, x509
+from asn1crypto import cms, algos, core, keys, pem
+from asn1crypto.x509 import Certificate
 from oscrypto import asymmetric
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import hashes, serialization
@@ -39,7 +40,7 @@ from cryptography.hazmat.primitives.asymmetric import padding, utils
 
 
 def cert2asn(cert, cert_bytes=True):
-    if isinstance(cert, x509.Certificate):
+    if isinstance(cert, Certificate):
         return cert
     if cert_bytes:
         cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
@@ -47,7 +48,7 @@ def cert2asn(cert, cert_bytes=True):
         cert_bytes = cert
     if pem.detect(cert_bytes):
         _, _, cert_bytes = pem.unarmor(cert_bytes)
-    return x509.Certificate.load(cert_bytes)
+    return Certificate.load(cert_bytes)
 
 
 def sign_bytes(data_unsigned, key, cert, other_certs, hashalgo, attrs=True, signed_value=None, pss=False):
