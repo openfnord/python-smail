@@ -5,9 +5,8 @@ import unittest
 from email import message_from_string
 from tempfile import mkstemp
 
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend as cryptography_backend
-from cryptography.hazmat.primitives import serialization
+from asn1crypto import keys, pem
+from asn1crypto.x509 import Certificate
 
 from .conftest import FIXTURE_DIR
 from smail.sign import sign_message
@@ -20,6 +19,7 @@ class SignTest(unittest.TestCase):
         self.openssl_binary = os.environ.get("OPENSSL_BINARY", None)
         if not self.openssl_binary:
             self.openssl_binary = "openssl"
+
 
     def test_message_from_carl(self):
         message = [
@@ -40,15 +40,21 @@ class SignTest(unittest.TestCase):
         self.assertIsInstance(msg, email.message.Message)
 
         # load cert & key
-        with open(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem'), 'rb') as cert_file:
-            cert = x509.load_pem_x509_certificate(
-                cert_file.read(), cryptography_backend())
+        with open(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem'), 'rb') as cert_signer_file:
+            der_bytes = cert_signer_file.read()
+            if pem.detect(der_bytes):
+                type_name, headers, der_bytes = pem.unarmor(der_bytes)
 
-        with open(os.path.join(FIXTURE_DIR, 'CarlPrivRSASign.pem'), 'rb') as key_file:
-            private_key = serialization.load_pem_private_key(
-                key_file.read(), None, cryptography_backend())
+            cert_signer = Certificate.load(der_bytes)
 
-        msg_signed = sign_message(msg, private_key, cert, other_certs=[], hashalgo='sha256')
+        with open(os.path.join(FIXTURE_DIR, 'CarlPrivRSASign.pem'), 'rb') as key_signer_file:
+            key_bytes = key_signer_file.read()
+            if pem.detect(key_bytes):
+                _, _, key_bytes = pem.unarmor(key_bytes)
+
+            key_signer_info = keys.PrivateKeyInfo.load(key_bytes)
+
+        msg_signed = sign_message(msg, key_signer_info, cert_signer, other_certs=[], hashalgo='sha256')
 
         fd, tmp_file = mkstemp()
         os.write(fd, msg_signed.as_bytes())
