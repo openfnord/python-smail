@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 import email
 import os
-import smtplib
-import unittest
 from email.message import Message
 from shutil import copyfile
 
 import pytest
-from asn1crypto import pem
+from asn1crypto import pem, keys
 from asn1crypto.x509 import Certificate
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
@@ -19,9 +17,21 @@ from tests.conftest import FIXTURE_DIR
 from tests.fixtures import get_plain_text_message
 
 
-class MailTest(unittest.TestCase):
+class TestMessage:
+    """Test Message"""
+
+    test_dir = None
+    smtp_host = None
+    smtp_port = None
+    smtp_user = None
+    smtp_pass = None
+
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
+        """ setup any state specific to the execution of the given class (which
+        usually contains tests).
+        """
+
         # use test_output/ as target for output files
         test_base_path = os.path.dirname(os.path.realpath(__file__))
         cls.test_dir = os.path.join(test_base_path, "..", "test_output")
@@ -52,92 +62,74 @@ class MailTest(unittest.TestCase):
         cls.smtp_user = os.environ.get("SMAIL_SMTP_USER", None)
         cls.smtp_pass = os.environ.get("SMAIL_SMTP_PASS", None)
 
-    def tearDown(self):
-        file_list = [f for f in os.listdir(self.test_dir)]
-        # self.assertListEqual(file_list, [
-        #     "plain_text_message.eml",
-        #     "plain_text_message_signed_by_bob.eml"
-        # ])
+    @classmethod
+    def teardown_class(cls):
+        """ teardown any state that was previously setup with a call to
+        setup_class.
+        """
+
+        file_list = [f for f in os.listdir(cls.test_dir)]
+        assert set(file_list) == {'BobRSASignByCarl_password.p12',
+                                  'BobRSASignByCarl_password.txt',
+                                  'plain_message.eml',
+                                  'plain_message_encrypted_for_bob.eml',
+                                  'plain_message_encrypted_for_bob_3des.eml',
+                                  'plain_message_signed_by_alice_md5.eml',
+                                  'plain_message_signed_by_alice_sha1.eml',
+                                  'plain_message_signed_by_alice_sha256.eml'}
 
         # (re-)check that everything is a "Message"
         msgs = []
         for f_name in file_list:
-            with open(os.path.join(self.test_dir, f_name), 'rb') as f:
+            with open(os.path.join(cls.test_dir, f_name), 'rb') as f:
                 msg = email.message_from_bytes(f.read())
-                self.assertIsInstance(msg, Message)
+                assert isinstance(msg, Message)
                 msgs.append(msg)
 
-        self.send_messages(msgs)
-
-    def send_messages(self, msgs):
-        if not self.smtp_host:
-            return
-
-        # ok - SMTP is configured via ENVIRONMENT
-        with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-            # if credentials were supplied then login
-            if self.smtp_user and self.smtp_pass:
-                server.login(self.smtp_user, self.smtp_pass)
-
-            # now loop over messages s
-            for msg in msgs:
-                for header in msg.items():
-                    # make sure that this is not a "example.com" test message
-                    if header[0].lower() == "to":
-                        self.assertTrue("example.com" not in str(header[1]))
-
-                    if header[0].lower() == "from":
-                        self.assertTrue("example.com" not in str(header[1]))
-
-                # finally send the message
-                server.send_message(msg)
-
-    @classmethod
-    @pytest.fixture(scope='class', autouse=True)
-    def plain_text_message(cls):
-        cls.plain_text_message = get_plain_text_message()
-
-    # def test_something(self):
-    #     # Create a file path
-    #     file_path = os.path.join(self.test_dir, 'test1.txt')
-    #
-    #     # Create a file in the temporary directory
-    #     with open(file_path, 'w') as f:
-    #         # Write something to it
-    #         f.write('The owls are not what they seem1')
-    #
-    #     # Reopen the file and check if what we read back is the same
-    #     with open(file_path) as f:
-    #         self.assertEqual(f.read(), 'The owls are not what they seem1')
-
-    # def test_dir_path(self):
-    #     # Create a file path
-    #     self.assertEqual(self.test_dir, "foobar")
-
-    def test_plain_message(self):
+    @pytest.mark.parametrize("output_file_eml", ['plain_message.eml'])
+    def test_plain_message(self, output_file_eml):
         file_path = os.path.join(self.test_dir, 'plain_message.eml')
 
         with open(file_path, 'wb') as f:
-            f.write(self.plain_text_message.as_bytes())
+            f.write(get_plain_text_message().as_bytes())
 
-    def test_plain_message_signed_by_alice(self):
-        file_path = os.path.join(self.test_dir, 'plain_message_signed_by_alice.eml')
+    @pytest.mark.parametrize("output_file_eml,pub_key,private_key,hashalgo", [
+        ("plain_message_signed_by_alice_md5.eml", "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "md5"),
+        ("plain_message_signed_by_alice_sha1.eml", "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "sha1"),
+        ("plain_message_signed_by_alice_sha256.eml", "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "sha256")
+    ])
+    def test_plain_message_signed_by_alice(self, output_file_eml, pub_key, private_key, hashalgo):
 
-        with open(os.path.join(FIXTURE_DIR, 'AliceRSASignByCarl.pem'), 'rb') as cert_signer_file:
+        file_path = os.path.join(self.test_dir, output_file_eml)
+
+        with open(os.path.join(FIXTURE_DIR, pub_key), 'rb') as cert_signer_file:
             der_bytes = cert_signer_file.read()
             if pem.detect(der_bytes):
                 type_name, headers, der_bytes = pem.unarmor(der_bytes)
 
             cert_signer = Certificate.load(der_bytes)
 
-        with open(os.path.join(FIXTURE_DIR, 'AlicePrivRSASign.pem'), 'rb') as key_signer_file:
-            key_signer = serialization.load_pem_private_key(
-                key_signer_file.read(),
-                password=None,
-                backend=default_backend()
-            )
+        # with open(os.path.join(FIXTURE_DIR, 'AlicePrivRSASign.pem'), 'rb') as key_signer_file:
+        #     key_signer = serialization.load_pem_private_key(
+        #         key_signer_file.read(),
+        #         password=None,
+        #         backend=default_backend()
+        #     )
 
-        signed_message = sign_message(self.plain_text_message, key_signer, cert_signer)
+        with open(os.path.join(FIXTURE_DIR, private_key), 'rb') as key_signer_file:
+            key_bytes = key_signer_file.read()
+            if pem.detect(key_bytes):
+                _, _, key_bytes = pem.unarmor(key_bytes)
+
+            key_signer = keys.RSAPrivateKey.load(key_bytes)
+            key_signer_info = keys.PrivateKeyInfo.load(key_bytes)
+
+        assert isinstance(key_signer_info, keys.PrivateKeyInfo)
+        assert isinstance(key_signer, keys.RSAPrivateKey)
+
+        signed_message = sign_message(get_plain_text_message(), key_signer_info, cert_signer, hashalgo=hashalgo)
+
+        assert isinstance(signed_message, email.message.Message)
 
         with open(file_path, 'wb') as f:
             f.write(signed_message.as_bytes())
@@ -148,7 +140,9 @@ class MailTest(unittest.TestCase):
         with open(os.path.join(FIXTURE_DIR, 'BobRSASignByCarl.pem'), 'rb') as cert_file:
             cert = cert_file.read()
 
-        encrypted_message = encrypt_message(self.plain_text_message, certs_recipients=cert)
+        assert isinstance(get_plain_text_message(), email.message.Message)
+
+        encrypted_message = encrypt_message(get_plain_text_message(), certs_recipients=cert)
 
         with open(file_path, 'wb') as f:
             f.write(encrypted_message.as_bytes())
@@ -159,7 +153,7 @@ class MailTest(unittest.TestCase):
         with open(os.path.join(FIXTURE_DIR, 'BobRSASignByCarl.pem'), 'rb') as cert_file:
             cert = cert_file.read()
 
-        encrypted_message = encrypt_message(self.plain_text_message, certs_recipients=cert, algorithm='tripledes_3key')
+        encrypted_message = encrypt_message(get_plain_text_message(), certs_recipients=cert, algorithm='tripledes_3key')
 
         with open(file_path, 'wb') as f:
             f.write(encrypted_message.as_bytes())
@@ -189,13 +183,27 @@ class MailTest(unittest.TestCase):
 
             cert = Certificate.load(der_bytes)
 
-        signed_encrypted_message = sign_and_encrypt_message(self.plain_text_message,
+        signed_encrypted_message = sign_and_encrypt_message(get_plain_text_message(),
                                                             cert_signer, key_signer,
                                                             cert)
 
         with open(file_path, 'wb') as f:
             f.write(signed_encrypted_message.as_bytes())
 
-
-if __name__ == "__main__":
-    unittest.main()
+# @pytest.fixture(params=['plain_message.eml'])
+# def plain(request):
+#     return request.param
+#
+#
+# class TestMailParam:
+#     def test_plain_message(self, plain):
+#         assert plain == "plain_message.eml"
+#
+#     @pytest.mark.parametrize('data', [1, 2, 3, 4])
+#     def test_plain_message2(self, data):
+#         assert data in range(1, 5)
+#
+#
+# @pytest.mark.parametrize('output_file_eml', ['plain_message.eml'])
+# def test_func_plain_message(output_file_eml):
+#     assert output_file_eml == "plain_message.eml"
