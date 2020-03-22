@@ -169,4 +169,3 @@ def get_cipher(algorithm):
         return cipher(algorithm, *parameters)
     else:
         return None
-
