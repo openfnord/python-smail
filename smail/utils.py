@@ -2,6 +2,10 @@
 
 import subprocess
 
+UNIX_NEWLINE = '\n'
+WINDOWS_NEWLINE = '\r\n'
+MAC_NEWLINE = '\r'
+
 
 def append_lines(lines, wrap, buf):
     """Append lines to the buffer. If the first line can be appended to the last
@@ -44,6 +48,21 @@ def wrap_lines(long_string, wrap):
         else:
             ret += [line[i: i + wrap] for i in range(0, len(line), wrap)]
     return ret
+
+
+def normalize_line_endings(lines, line_ending='unix'):
+    r"""Normalize line endings to unix (\n), windows (\r\n) or mac (\r).
+    :param lines: The lines to normalize.
+    :param line_ending: The line ending format.
+    Acceptable values are 'unix' (default), 'windows' and 'mac'.
+    :return: Line endings normalized.
+    """
+    lines = lines.replace(WINDOWS_NEWLINE, UNIX_NEWLINE).replace(MAC_NEWLINE, UNIX_NEWLINE)
+    if line_ending == 'windows':
+        lines = lines.replace(UNIX_NEWLINE, WINDOWS_NEWLINE)
+    elif line_ending == 'mac':
+        lines = lines.replace(UNIX_NEWLINE, MAC_NEWLINE)
+    return lines
 
 
 def get_cmd_output(args):
