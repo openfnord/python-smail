@@ -7,6 +7,10 @@ from email.message import Message
 from shutil import copyfile
 
 import pytest
+from asn1crypto import pem
+from asn1crypto.x509 import Certificate
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 
 from smail import sign_message
 from smail import encrypt_message
@@ -120,12 +124,20 @@ class MailTest(unittest.TestCase):
         file_path = os.path.join(self.test_dir, 'plain_message_signed_by_alice.eml')
 
         with open(os.path.join(FIXTURE_DIR, 'AliceRSASignByCarl.pem'), 'rb') as cert_signer_file:
-            cert_signer = cert_signer_file.read()
+            der_bytes = cert_signer_file.read()
+            if pem.detect(der_bytes):
+                type_name, headers, der_bytes = pem.unarmor(der_bytes)
+
+            cert_signer = Certificate.load(der_bytes)
 
         with open(os.path.join(FIXTURE_DIR, 'AlicePrivRSASign.pem'), 'rb') as key_signer_file:
-            key_signer = key_signer_file.read()
+            key_signer = serialization.load_pem_private_key(
+                key_signer_file.read(),
+                password=None,
+                backend=default_backend()
+            )
 
-        signed_message = sign_message(self.plain_text_message, cert_signer, key_signer)
+        signed_message = sign_message(self.plain_text_message, key_signer, cert_signer)
 
         with open(file_path, 'wb') as f:
             f.write(signed_message.as_bytes())
@@ -141,17 +153,40 @@ class MailTest(unittest.TestCase):
         with open(file_path, 'wb') as f:
             f.write(encrypted_message.as_bytes())
 
+    def test_plain_message_encrypted_for_bob_3des(self):
+        file_path = os.path.join(self.test_dir, 'plain_message_encrypted_for_bob_3des.eml')
+
+        with open(os.path.join(FIXTURE_DIR, 'BobRSASignByCarl.pem'), 'rb') as cert_file:
+            cert = cert_file.read()
+
+        encrypted_message = encrypt_message(self.plain_text_message, certs_recipients=cert, algorithm='tripledes_3key')
+
+        with open(file_path, 'wb') as f:
+            f.write(encrypted_message.as_bytes())
+
     def test_plain_message_signed_by_alice_encrypted_for_bob(self):
         file_path = os.path.join(self.test_dir, 'plain_message_signed_by_alice_encrypted_for_bob.eml')
 
         with open(os.path.join(FIXTURE_DIR, 'AliceRSASignByCarl.pem'), 'rb') as cert_signer_file:
-            cert_signer = cert_signer_file.read()
+            der_bytes = cert_signer_file.read()
+            if pem.detect(der_bytes):
+                type_name, headers, der_bytes = pem.unarmor(der_bytes)
+
+            cert_signer = Certificate.load(der_bytes)
 
         with open(os.path.join(FIXTURE_DIR, 'AlicePrivRSASign.pem'), 'rb') as key_signer_file:
-            key_signer = key_signer_file.read()
+            key_signer = serialization.load_pem_private_key(
+                key_signer_file.read(),
+                password=None,
+                backend=default_backend()
+            )
 
-        with open(os.path.join(FIXTURE_DIR, 'BobRSASignByCarl.pem'), 'rb') as cert_file:
-            cert = cert_file.read()
+        with open(os.path.join(FIXTURE_DIR, 'BobRSASignByCarl.pem'), 'rb') as cert_signer_file:
+            der_bytes = cert_signer_file.read()
+            if pem.detect(der_bytes):
+                type_name, headers, der_bytes = pem.unarmor(der_bytes)
+
+            cert = Certificate.load(der_bytes)
 
         signed_encrypted_message = sign_and_encrypt_message(self.plain_text_message,
                                                             cert_signer, key_signer,
