@@ -10,7 +10,7 @@ from cryptography.hazmat.backends import default_backend as cryptography_backend
 from cryptography.hazmat.primitives import serialization
 
 from .conftest import FIXTURE_DIR
-from smail.sign import sign_bytes, sign_message
+from smail.sign import sign_message
 from smail.utils import get_cmd_output
 
 
