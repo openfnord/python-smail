@@ -8,6 +8,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher
 from cryptography.hazmat.primitives.ciphers import algorithms
 from cryptography.hazmat.primitives.ciphers import modes
+from oscrypto import symmetric
 
 
 class BlockCipher:
@@ -26,7 +27,7 @@ class BlockCipher:
         return NotImplemented
 
 
-class AES(BlockCipher):
+class AES_old(BlockCipher):
     algorithm = None
     key_size = None
     block_size = 16
@@ -70,10 +71,98 @@ class AES(BlockCipher):
         return self._iv
 
 
+class Template(BlockCipher):
+    algorithm = None
+    key_size = None
+    block_size = None
+    iv_size = None
+
+    def __init__(self, algorithm, key_size):
+        self.algorithm = algorithm
+        self.key_size = key_size
+        self._session_key = os.urandom(self.key_size)
+        self._iv = os.urandom(self.iv_size)
+
+    @property
+    def session_key(self):
+        return self._session_key
+
+    @property
+    def parameters(self):
+        return self._iv
+
+
+class AES(BlockCipher):
+    algorithm = None
+    key_size = None
+    block_size = 16
+
+    def __init__(self, algorithm, key_size):
+        self.algorithm = algorithm
+        self.key_size = key_size
+        self._session_key = os.urandom(self.key_size)
+        self._iv = os.urandom(self.block_size)  # fixed size of 16 bytes (block size) for initialization vector
+
+    def encrypt(self, data):
+
+        _, ciphertext = symmetric.aes_cbc_pkcs7_encrypt(self._session_key, data.encode("utf-8"), self._iv)
+
+        return {
+            "content_type": "data",
+            "content_encryption_algorithm": {
+                "algorithm": self.algorithm,
+                "parameters": self._iv,
+            },
+            "encrypted_content": ciphertext,
+        }
+
+    @property
+    def session_key(self):
+        return self._session_key
+
+    @property
+    def parameters(self):
+        return self._iv
+
+
+class TripleDES(BlockCipher):
+    algorithm = None
+    key_size = None
+
+    def __init__(self, algorithm, key_size):
+        self.algorithm = algorithm
+        self.key_size = key_size
+        self._session_key = os.urandom(self.key_size)
+        self._iv = os.urandom(8)  # fixed size of 8 bytes for initialization vector
+
+    def encrypt(self, data):
+
+        _, ciphertext = symmetric.tripledes_cbc_pkcs5_encrypt(self._session_key, data.encode("utf-8"), self._iv)
+
+        return {
+            "content_type": "data",
+            "content_encryption_algorithm": {
+                "algorithm": self.algorithm,
+                "parameters": self._iv,
+            },
+            "encrypted_content": ciphertext,
+        }
+
+    @property
+    def session_key(self):
+        return self._session_key
+
+    @property
+    def parameters(self):
+        return self._iv
+
+
 def get_cipher(algorithm):
+
     _algorithms = {
-        "aes128_cbc": (AES, (modes.CBC, 16)),
-        "aes256_cbc": (AES, (modes.CBC, 32)),
+        "tripledes_3key": (TripleDES, [24]),
+        "aes128_cbc": (AES_old, (modes.CBC, 16)),
+        "aes256_cbc": (AES, [32]),
     }
     if algorithm in _algorithms:
         cipher, parameters = _algorithms[algorithm]

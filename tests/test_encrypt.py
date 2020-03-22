@@ -6,7 +6,7 @@ from tempfile import mkstemp
 
 from .conftest import FIXTURE_DIR
 from smail.encrypt import encrypt_message
-from smail.utils import get_cmd_output
+from smail.utils import get_cmd_output, normalize_line_endings
 
 
 class EncryptTest(unittest.TestCase):
@@ -36,17 +36,55 @@ class EncryptTest(unittest.TestCase):
             "-in", tmp_file,
             "-inkey", os.path.join(FIXTURE_DIR, 'CarlPrivRSASign.pem'),
         ]
+
+        # self.assertEqual(" ".join(cmd), "foo")
+
         cmd_output = get_cmd_output(cmd)
         private_message = message_from_string(cmd_output)
         payload = private_message.get_payload().splitlines()
 
         self.assertEqual("Now you see me.", payload[len(payload) - 1])
 
-    def test_message_to_carl_aes256_cbc(self, ):
-        self.assert_message_to_carl("aes256_cbc")
+    def assert_message_to_bob(self, algorithm):
+        message = [
+            'From: "Alice" <alice@foo.com>',
+            'To: "Bob" <bob@bar.com>',
+            "Subject: A message from python for Bob",
+            "",
+            "Hey Bob, now you see me..!",
+        ]
+
+        with open(os.path.join(FIXTURE_DIR, 'BobRSASignByCarl.pem'), 'rb') as cert:
+            result = encrypt_message("\n".join(message), cert.read(), algorithm=algorithm)
+
+        fd, tmp_file = mkstemp()
+        os.write(fd, result.encode())
+
+        cmd = [
+            self.openssl_binary, "smime", "-decrypt",
+            "-in", tmp_file,
+            "-inkey", os.path.join(FIXTURE_DIR, 'BobPrivRSAEncrypt.pem'),
+        ]
+
+        # self.assertEqual(" ".join(cmd), "foo")
+
+        cmd_output = get_cmd_output(cmd)
+        private_message = message_from_string(cmd_output)
+        payload = private_message.get_payload().splitlines()
+
+        self.assertEqual("Hey Bob, now you see me..!", payload[len(payload) - 1])
+
+    def test_message_to_bob_tripleDES_cbc(self, ):
+        self.assert_message_to_bob("tripledes_3key")
+
+    def test_message_to_carl_tripleDES_cbc(self, ):
+        self.assert_message_to_carl("tripledes_3key")
 
     def test_message_to_carl_aes128_cbc(self):
         self.assert_message_to_carl("aes128_cbc")
+
+    def test_message_to_carl_aes256_cbc(self, ):
+        self.assert_message_to_carl("aes256_cbc")
 
     def test_message_with_breaks_to_carl_aes256_cbc(self):
         message = [
@@ -75,9 +113,11 @@ class EncryptTest(unittest.TestCase):
         cmd_output = get_cmd_output(cmd)
         private_message = message_from_string(cmd_output)
 
+        result = normalize_line_endings(private_message.get_payload())
+
         self.assertEqual(("Hello,\n"
                           "\n"
                           "this is a message with line breaks.\n"
                           "And some text.\n"
                           "\n"
-                          "Goodbye!"), private_message.get_payload())
+                          "Goodbye!"), result)

@@ -10,7 +10,7 @@ from cryptography.hazmat.backends import default_backend as cryptography_backend
 from cryptography.hazmat.primitives import serialization
 
 from .conftest import FIXTURE_DIR
-from smail.sign import sign_bytes
+from smail.sign import sign_message
 from smail.utils import get_cmd_output
 
 
@@ -26,6 +26,7 @@ class SignTest(unittest.TestCase):
             'From: "Alice" <alice@foo.com>',
             'To: "Carl" <carl@bar.com>',
             "Subject: A message from python",
+            "Message-ID: <4231.629.XYzi-What@Other-Host>",
             "",
             "Hello,\n"
             "\n"
@@ -47,8 +48,7 @@ class SignTest(unittest.TestCase):
             private_key = serialization.load_pem_private_key(
                 key_file.read(), None, cryptography_backend())
 
-        payload_signed = sign_bytes(msg.as_bytes(), cert, private_key)
-        msg_signed = email.message_from_bytes(payload_signed)
+        msg_signed = sign_message(msg, private_key, cert, other_certs=[], hashalgo='sha256')
 
         fd, tmp_file = mkstemp()
         os.write(fd, msg_signed.as_bytes())
