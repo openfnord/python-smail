@@ -135,31 +135,31 @@ def sign_bytes(data_unsigned, key, cert, other_certs, hashalgo, attrs=True, sign
             signer,
         ],
     }
-    datas = cms.ContentInfo({
+    data_signed = cms.ContentInfo({
         'content_type': cms.ContentType('signed_data'),
         'content': cms.SignedData(config),
     })
     if attrs:
-        tosign = datas['content']['signer_infos'][0]['signed_attrs'].dump()
-        tosign = b'\x31' + tosign[1:]
+        to_sign = data_signed['content']['signer_infos'][0]['signed_attrs'].dump()
+        to_sign = b'\x31' + to_sign[1:]
     else:
-        tosign = data_unsigned
+        to_sign = data_unsigned
 
     key = asymmetric.load_private_key(key)
     if pss:
         raise NotImplementedError("Not yet fully implemented/tested")
         # signed_value_signature = asymmetric.rsa_pss_sign(
         #     key,
-        #     tosign,
+        #     to_sign,
         #     'sha512'
         # )
     else:
         signed_value_signature = asymmetric.rsa_pkcs1v15_sign(
             key,
-            tosign,
+            to_sign,
             hashalgo.lower()
         )
 
-    datas['content']['signer_infos'][0]['signature'] = signed_value_signature
+    data_signed['content']['signer_infos'][0]['signature'] = signed_value_signature
 
-    return datas.dump()
+    return data_signed.dump()
