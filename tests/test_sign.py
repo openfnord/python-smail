@@ -20,7 +20,6 @@ class SignTest(unittest.TestCase):
         if not self.openssl_binary:
             self.openssl_binary = "openssl"
 
-
     def test_message_from_carl(self):
         message = [
             'From: "Alice" <alice@foo.com>',
