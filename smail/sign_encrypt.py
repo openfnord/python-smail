@@ -74,8 +74,10 @@ def sign_and_encrypt_message(message, cert_signer, key_signer, certs_recipients,
     # print(payload)
     # print("---")
 
-    payload_signed = sign_message(payload, cert_signer, key_signer)
-    message_signed = email.message_from_bytes(payload_signed)
+    # payload_signed = sign_message(payload, key_signer, cert_signer)
+    # message_signed = email.message_from_bytes(payload_signed)
+
+    message_signed = sign_message(copied_msg, key_signer, cert_signer)
 
     # print("---")
     # print("Signed")

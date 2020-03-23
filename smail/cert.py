@@ -9,7 +9,6 @@ from abc import abstractmethod
 from asn1crypto import cms
 from asn1crypto import pem
 from asn1crypto import x509
-from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.backends import default_backend as cryptography_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -43,7 +42,7 @@ class RSAPublicKeyCipher(PublicKeyCipher):
     def __init__(self, public_key_info):
         rsaparams = public_key_info["public_key"].native
         key = rsa.RSAPublicNumbers(rsaparams["public_exponent"], rsaparams["modulus"])
-        backend = default_backend()
+        backend = cryptography_backend()
         self._cipher = key.public_key(backend)
         self._padding = padding.PKCS1v15()
 
