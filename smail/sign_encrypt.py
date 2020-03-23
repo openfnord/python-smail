@@ -58,15 +58,15 @@ def sign_and_encrypt_message(message, cert_signer, key_signer, certs_recipients,
     popped_headers = _pop_headers(copied_msg)
 
     # ToDo(frennkie) payload not used anymore.. does this still work for MultiPart?!
-    if isinstance(copied_msg, MIMEMultipart):
-        payload = b''.join([x.as_bytes() for x in copied_msg.get_payload()])
-    elif isinstance(copied_msg, MIMEText):
-        # ensure that we have bytes
-        payload = copied_msg.get_payload().encode()
-    elif isinstance(copied_msg, str):
-        payload = copied_msg.encode()
-    else:
-        payload = copied_msg.as_bytes()
+    # if isinstance(copied_msg, MIMEMultipart):
+    #     payload = b''.join([x.as_bytes() for x in copied_msg.get_payload()])
+    # elif isinstance(copied_msg, MIMEText):
+    #     # ensure that we have bytes
+    #     payload = copied_msg.get_payload().encode()
+    # elif isinstance(copied_msg, str):
+    #     payload = copied_msg.encode()
+    # else:
+    #     payload = copied_msg.as_bytes()
 
     # print("---")
     # print("Payload")

@@ -38,6 +38,12 @@ from oscrypto import asymmetric
 
 
 def sign_bytes(data_unsigned, key, cert, other_certs, hashalgo, attrs=True, signed_value=None, pss=False):
+    """sign_bytes
+
+    cert is mandatory for now (used to include the sender certificate in the
+    CMS "certificates" part
+
+    """
     if not isinstance(data_unsigned, bytes):
         raise AttributeError("only bytes supported")
 
