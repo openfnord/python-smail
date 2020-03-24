@@ -1,9 +1,6 @@
-import email
 from copy import deepcopy
 from email import message_from_bytes, message_from_string
 from email.header import Header
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 from smail.encrypt import encrypt_message
 from smail.sign import sign_message
@@ -42,6 +39,7 @@ def _pop_headers(msg, blacklist=None):
 
 
 def sign_and_encrypt_message(message, cert_signer, key_signer, certs_recipients, algorithm="aes256_cbc"):
+    # TODO(frennkie) rewrite this!
     # Get the message content. This could be a string, bytes or a message object
     passed_as_str = isinstance(message, str)
     if passed_as_str:
@@ -57,15 +55,16 @@ def sign_and_encrypt_message(message, cert_signer, key_signer, certs_recipients,
 
     popped_headers = _pop_headers(copied_msg)
 
-    if isinstance(copied_msg, MIMEMultipart):
-        payload = b''.join([x.as_bytes() for x in copied_msg.get_payload()])
-    elif isinstance(copied_msg, MIMEText):
-        # ensure that we have bytes
-        payload = copied_msg.get_payload().encode()
-    elif isinstance(copied_msg, str):
-        payload = copied_msg.encode()
-    else:
-        payload = copied_msg.as_bytes()
+    # ToDo(frennkie) payload not used anymore.. does this still work for MultiPart?!
+    # if isinstance(copied_msg, MIMEMultipart):
+    #     payload = b''.join([x.as_bytes() for x in copied_msg.get_payload()])
+    # elif isinstance(copied_msg, MIMEText):
+    #     # ensure that we have bytes
+    #     payload = copied_msg.get_payload().encode()
+    # elif isinstance(copied_msg, str):
+    #     payload = copied_msg.encode()
+    # else:
+    #     payload = copied_msg.as_bytes()
 
     # print("---")
     # print("Payload")
@@ -73,8 +72,10 @@ def sign_and_encrypt_message(message, cert_signer, key_signer, certs_recipients,
     # print(payload)
     # print("---")
 
-    payload_signed = sign_message(payload, cert_signer, key_signer)
-    message_signed = email.message_from_bytes(payload_signed)
+    # payload_signed = sign_message(payload, key_signer, cert_signer)
+    # message_signed = email.message_from_bytes(payload_signed)
+
+    message_signed = sign_message(copied_msg, key_signer, cert_signer)
 
     # print("---")
     # print("Signed")

@@ -23,6 +23,7 @@ py36:
 pep8:
   image: python:3.6
   stage: style
+  allow_failure: true
   script:
     - tox -e pep8
 
