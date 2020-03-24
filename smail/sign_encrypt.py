@@ -1,8 +1,6 @@
 from copy import deepcopy
 from email import message_from_bytes, message_from_string
 from email.header import Header
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 from smail.encrypt import encrypt_message
 from smail.sign import sign_message
