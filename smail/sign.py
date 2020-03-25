@@ -7,25 +7,40 @@ from email.mime.multipart import MIMEMultipart
 from smail.signer import sign_bytes
 
 
-def sign_message(msg, key, cert, other_certs=None, hashalgo='sha256', attrs=True, pss=False):
+class UnsupportedDigestError(Exception):
+    """
+    An exception indicating that an unsupported digest algorithm was specified
+    """
 
+    pass
+
+
+class DeprecatedDigestError(Exception):
+    """
+    An exception indicating that a deprecated digest algorithm was specified
+    """
+
+    pass
+
+
+def sign_message(msg, key, cert, other_certs=None, hashalgo='sha256', attrs=True, pss=False, allow_deprecated=False):
     if other_certs is None:
         other_certs = []
 
     if hashalgo == "md5":
         micalg = "md5"
+        if not allow_deprecated:
+            raise DeprecatedDigestError("{} is deprecated".format(hashalgo))
     elif hashalgo == "sha1":
         micalg = "sha-1"
-    elif hashalgo == "sha224":
-        micalg = "sha-224"
+        if not allow_deprecated:
+            raise DeprecatedDigestError("{} is deprecated".format(hashalgo))
     elif hashalgo == "sha256":
         micalg = "sha-256"
-    elif hashalgo == "sha384":
-        micalg = "sha-384"
     elif hashalgo == "sha512":
         micalg = "sha-512"
     else:
-        raise AttributeError()
+        raise UnsupportedDigestError("{} is unknown or unsupported".format(hashalgo))
 
     prefix = ['x-', ''][pss]
 
