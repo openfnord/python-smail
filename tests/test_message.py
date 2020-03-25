@@ -96,12 +96,14 @@ class TestMessage:
         with open(file_path, 'wb') as f:
             f.write(msg.as_bytes())
 
-    @pytest.mark.parametrize("output_file_eml,pub_key,private_key,hashalgo", [
-        ("plain_message_signed_by_alice_md5.eml", "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "md5"),
-        ("plain_message_signed_by_alice_sha1.eml", "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "sha1"),
-        ("plain_message_signed_by_alice_sha256.eml", "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "sha256")
+    # ToDo(frennkie) add test that raises deprecated digest error
+
+    @pytest.mark.parametrize("output_file_eml,pub_key,private_key,hashalgo,deprecated", [
+        ("plain_message_signed_by_alice_md5.eml", "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "md5", True),
+        ("plain_message_signed_by_alice_sha1.eml", "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "sha1", True),
+        ("plain_message_signed_by_alice_sha256.eml", "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "sha256", False)
     ])
-    def test_plain_message_signed_by_alice(self, output_file_eml, pub_key, private_key, hashalgo):
+    def test_plain_message_signed_by_alice(self, output_file_eml, pub_key, private_key, hashalgo, deprecated):
         file_path = os.path.join(self.test_dir, output_file_eml)
 
         msg = get_plain_text_message()
@@ -114,13 +116,6 @@ class TestMessage:
 
             cert_signer = x509.Certificate.load(der_bytes)
 
-        # with open(os.path.join(FIXTURE_DIR, 'AlicePrivRSASign.pem'), 'rb') as key_signer_file:
-        #     key_signer = serialization.load_pem_private_key(
-        #         key_signer_file.read(),
-        #         password=None,
-        #         backend=default_backend()
-        #     )
-
         with open(os.path.join(FIXTURE_DIR, private_key), 'rb') as key_signer_file:
             key_bytes = key_signer_file.read()
             if pem.detect(key_bytes):
@@ -132,7 +127,7 @@ class TestMessage:
         assert isinstance(key_signer_info, keys.PrivateKeyInfo)
         assert isinstance(key_signer, keys.RSAPrivateKey)
 
-        signed_message = sign_message(msg, key_signer_info, cert_signer, hashalgo=hashalgo)
+        signed_message = sign_message(msg, key_signer_info, cert_signer, hashalgo=hashalgo, allow_deprecated=deprecated)
 
         assert isinstance(signed_message, email.message.Message)
 

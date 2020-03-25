@@ -29,11 +29,11 @@ def sign_message(msg, key, cert, other_certs=None, hashalgo='sha256', attrs=True
 
     if hashalgo == "md5":
         micalg = "md5"
-        if not allow_deprecated:
+        if allow_deprecated is False:
             raise DeprecatedDigestError("{} is deprecated".format(hashalgo))
     elif hashalgo == "sha1":
         micalg = "sha-1"
-        if not allow_deprecated:
+        if allow_deprecated is False:
             raise DeprecatedDigestError("{} is deprecated".format(hashalgo))
     elif hashalgo == "sha256":
         micalg = "sha-256"
