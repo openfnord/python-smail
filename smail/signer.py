@@ -59,7 +59,7 @@ def sign_bytes(data_unsigned, key, cert, other_certs, hashalgo, attrs=True, sign
             raise AttributeError("only asn1crypto.x509.Certificate supported")
         certificates.append(other_certs[i])
 
-    if hashalgo not in ["md5", "sha1", "sha224", "sha256", "sha384", "sha512"]:
+    if hashalgo not in ["md5", "sha1", "sha256", "sha512"]:
         raise AttributeError("hash algorithm unsupported: {}".format(hashalgo))
 
     if signed_value is None:
