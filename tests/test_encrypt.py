@@ -1,20 +1,25 @@
 # _*_ coding: utf-8 _*_
 import os
-import unittest
 from email import message_from_string
 from tempfile import mkstemp
+
+import pytest
 
 from .conftest import FIXTURE_DIR
 from smail.encrypt import encrypt_message
 from smail.utils import get_cmd_output, normalize_line_endings
 
 
-class EncryptTest(unittest.TestCase):
+class EncryptTest:
+    @classmethod
+    def setup_class(cls):
+        """ setup any state specific to the execution of the given class (which
+        usually contains tests).
+        """
 
-    def setUp(self):
-        self.openssl_binary = os.environ.get("OPENSSL_BINARY", None)
-        if not self.openssl_binary:
-            self.openssl_binary = "openssl"
+        cls.openssl_binary = os.environ.get("OPENSSL_BINARY", None)
+        if not cls.openssl_binary:
+            cls.openssl_binary = "openssl"
 
     def assert_message_to_carl(self, algorithm):
         message = [
@@ -27,6 +32,9 @@ class EncryptTest(unittest.TestCase):
 
         with open(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem'), 'rb') as cert:
             result = encrypt_message("\n".join(message), cert.read(), algorithm=algorithm)
+
+        # cert = asymmetric.load_certificate(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem'))
+        # result = encrypt_message("\n".join(message), [cert], algorithm=algorithm)
 
         fd, tmp_file = mkstemp()
         os.write(fd, result.encode())
@@ -43,7 +51,7 @@ class EncryptTest(unittest.TestCase):
         private_message = message_from_string(cmd_output)
         payload = private_message.get_payload().splitlines()
 
-        self.assertEqual("Now you see me.", payload[len(payload) - 1])
+        assert "Now you see me." == payload[len(payload) - 1]
 
     def assert_message_to_bob(self, algorithm):
         message = [
@@ -72,8 +80,9 @@ class EncryptTest(unittest.TestCase):
         private_message = message_from_string(cmd_output)
         payload = private_message.get_payload().splitlines()
 
-        self.assertEqual("Hey Bob, now you see me..!", payload[len(payload) - 1])
+        assert "Hey Bob, now you see me..!" == payload[len(payload) - 1]
 
+    @pytest.mark.skip
     def test_message_to_bob_tripleDES_cbc(self, ):
         self.assert_message_to_bob("tripledes_3key")
 
@@ -115,9 +124,4 @@ class EncryptTest(unittest.TestCase):
 
         result = normalize_line_endings(private_message.get_payload())
 
-        self.assertEqual(("Hello,\n"
-                          "\n"
-                          "this is a message with line breaks.\n"
-                          "And some text.\n"
-                          "\n"
-                          "Goodbye!"), result)
+        assert "Hello,\n\nthis is a message with line breaks.\nAnd some text.\n\nGoodbye!" == result

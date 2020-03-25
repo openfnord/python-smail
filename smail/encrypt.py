@@ -6,24 +6,21 @@ from email import message_from_string, message_from_bytes
 from email.mime.text import MIMEText
 
 from asn1crypto import cms
+from oscrypto import asymmetric
 
 from .block import get_cipher
-from .cert import certs_from_pem
+from .cert import get_recipient_info_for_cert
 from .utils import wrap_lines
 
 
 def __iterate_recipient_infos(certs, session_key):
-    if isinstance(certs, (list, set, tuple)):
-        # TODO(frennkie) this should also take smail.cert.Certificate ?!
-        for cert_file in certs:
-            for cert in certs_from_pem(cert_file):
-                recipient_info = cert.recipient_info(session_key)
-                yield recipient_info
-    else:
-        # TODO(frennkie) this should also take smail.cert.Certificate ?!
-        for cert in certs_from_pem(certs):
-            recipient_info = cert.recipient_info(session_key)
-            yield recipient_info
+    for cert in certs:
+        if not isinstance(cert, asymmetric.Certificate):
+            raise NotImplementedError("foo")
+
+        recipient_info = get_recipient_info_for_cert(cert, session_key)
+        # print("\nrecipient_info\n{}".format(recipient_info.native))
+        yield recipient_info
 
 
 def encrypt_message(message, certs_recipients, algorithm="aes256_cbc"):

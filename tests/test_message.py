@@ -6,6 +6,7 @@ from shutil import copyfile
 
 import pytest
 from asn1crypto import pem, keys, x509
+from oscrypto import asymmetric
 
 from smail import sign_message
 from smail import encrypt_message
@@ -70,7 +71,7 @@ class TestMessage:
                                   'BobRSASignByCarl_password.txt',
                                   'plain_message.eml',
                                   'plain_message_encrypted_for_alice_and_bob_aes256_cbc.eml',
-                                  'plain_message_encrypted_for_bob_aes128_ccc.eml',
+                                  'plain_message_encrypted_for_bob_aes128_cbc.eml',
                                   'plain_message_encrypted_for_bob_aes256_cbc.eml',
                                   'plain_message_encrypted_for_bob_tripledes.eml',
                                   'plain_message_signed_by_alice_encrypted_for_bob.eml',
@@ -140,13 +141,13 @@ class TestMessage:
             f.write(signed_message.as_bytes())
 
     @pytest.mark.parametrize("output_file_eml,pub_keys,algorithm", [
-        ("plain_message_encrypted_for_bob_aes128_ccc.eml", ["BobRSASignByCarl.pem"], "aes128_cbc"),
+        ("plain_message_encrypted_for_bob_aes128_cbc.eml", ["BobRSASignByCarl.pem"], "aes128_cbc"),
         ("plain_message_encrypted_for_bob_aes256_cbc.eml", ["BobRSASignByCarl.pem"], "aes256_cbc"),
         ("plain_message_encrypted_for_bob_tripledes.eml", ["BobRSASignByCarl.pem"], "tripledes_3key"),
         ("plain_message_encrypted_for_alice_and_bob_aes256_cbc.eml",
          ("AliceRSASignByCarl.pem", "BobRSASignByCarl.pem"), "aes256_cbc"),
     ])
-    def test_plain_message_encrypted(self, output_file_eml, pub_keys, algorithm):
+    def test_plain_message_encrypted2(self, output_file_eml, pub_keys, algorithm):
         file_path = os.path.join(self.test_dir, output_file_eml)
 
         msg = get_plain_text_message()
@@ -154,8 +155,8 @@ class TestMessage:
 
         certs = []
         for pub_key in pub_keys:
-            with open(os.path.join(FIXTURE_DIR, pub_key), 'rb') as cert_file:
-                certs.append(cert_file.read())
+            cert = asymmetric.load_certificate(os.path.join(FIXTURE_DIR, pub_key))
+            certs.append(cert)
 
         assert isinstance(get_plain_text_message(), email.message.Message)
 
@@ -189,10 +190,10 @@ class TestMessage:
 
         certs = []
         for pub_key in pub_keys:
-            with open(os.path.join(FIXTURE_DIR, pub_key), 'rb') as cert_file:
-                certs.append(cert_file.read())
+            cert = asymmetric.load_certificate(os.path.join(FIXTURE_DIR, pub_key))
+            certs.append(cert)
 
-        signed_encrypted_message = sign_and_encrypt_message(msg, cert_signer, key_signer_info, certs)
+        signed_encrypted_message = sign_and_encrypt_message(msg, key_signer_info, cert_signer, certs)
 
         with open(file_path, 'wb') as f:
             f.write(signed_encrypted_message.as_bytes())
