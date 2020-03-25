@@ -6,7 +6,7 @@ This library makes it simple to create S/MIME messages in Python. It supports si
 encryption (using a public RSA key, in AES128-CBC, AES192-CBC or AES256-CBC modes) and the combination of both -
 where the message is first signed and the result is then encrypted (*"enveloped"*).
 
-The foundation of python-smail is the `cryptography`_ library which provides access to the C-bindings of OpenSSL
+The foundation of python-smail is the `oscrypto`_ library which provides access to the C-bindings of OpenSSL
 and implements many high and low level functionality. Additionally `asn1crypto`_ is used which is *"A fast, pure
 Python library for parsing and serializing ASN.1 structures."*.
 
@@ -15,8 +15,8 @@ Requirements
 ------------
 
 * Python 3.5+
-* cryptography (for OpenSSL C-bindings)
 * asn1crypto
+* oscrypto
 
 
 Example
@@ -31,6 +31,7 @@ the e-mail in S/MIME format::
     import os
     from email.mime.text import MIMEText
     from email.utils import formatdate
+    from oscrypto import asymmetric
     from smail import encrypt_message
 
     message = MIMEText("This a plain text body!")
@@ -39,10 +40,9 @@ the e-mail in S/MIME format::
     message['To'] = "BobRSA@example.com"
     message['Subject'] = "Text Message - Encrypted"
 
-    with open(os.path.join('tests', 'testdata', 'BobRSASignByCarl.pem'), 'rb') as cert_file:
-        cert = cert_file.read()
+    cert = asymmetric.load_certificate(os.path.join('tests', 'testdata', 'BobRSASignByCarl.pem'))
 
-    encrypted_message = encrypt_message(message, cert)
+    encrypted_message = encrypt_message(message, [cert])
     print(encrypted_message.as_string())
 
 Output::
@@ -74,8 +74,10 @@ The code below loads Alice's private and public key in PEM format and uses it to
 sign the e-mail in S/MIME format::
 
     import os
+    from asn1crypto import keys, pem, x509
     from email.mime.text import MIMEText
     from email.utils import formatdate
+    from oscrypto import asymmetric
     from smail import sign_message
 
     message = MIMEText("This a plain text body!")
@@ -85,12 +87,20 @@ sign the e-mail in S/MIME format::
     message['Subject'] = "Text Message - Signed"
 
     with open(os.path.join('tests', 'testdata', 'AliceRSASignByCarl.pem'), 'rb') as cert_signer_file:
-        cert_signer = cert_signer_file.read()
+        der_bytes = cert_signer_file.read()
+        if pem.detect(der_bytes):
+            type_name, headers, der_bytes = pem.unarmor(der_bytes)
+
+        cert_signer = x509.Certificate.load(der_bytes)
 
     with open(os.path.join('tests', 'testdata', 'AlicePrivRSASign.pem'), 'rb') as key_signer_file:
-        key_signer = key_signer_file.read()
+        key_bytes = key_signer_file.read()
+        if pem.detect(key_bytes):
+            _, _, key_bytes = pem.unarmor(key_bytes)
 
-    signed_message = sign_message(message, cert_signer, key_signer)
+        key_signer_info = keys.PrivateKeyInfo.load(key_bytes)
+
+    signed_message = sign_message(message, key_signer_info, cert_signer)
     print(signed_message.as_string())
 
 Output::
@@ -149,8 +159,10 @@ it to sign and encrypt the e-mail (from Alice to Bob) in S/MIME format::
 
 
     import os
+    from asn1crypto import keys, pem, x509
     from email.mime.text import MIMEText
     from email.utils import formatdate
+    from oscrypto import asymmetric
     from smail import sign_and_encrypt_message
 
     message = MIMEText("This a plain text body!")
@@ -160,15 +172,22 @@ it to sign and encrypt the e-mail (from Alice to Bob) in S/MIME format::
     message['Subject'] = "Text Message - Signed and Encrypted"
 
     with open(os.path.join('tests', 'testdata', 'AliceRSASignByCarl.pem'), 'rb') as cert_signer_file:
-        cert_signer = cert_signer_file.read()
+        der_bytes = cert_signer_file.read()
+        if pem.detect(der_bytes):
+            type_name, headers, der_bytes = pem.unarmor(der_bytes)
+
+        cert_signer = x509.Certificate.load(der_bytes)
 
     with open(os.path.join('tests', 'testdata', 'AlicePrivRSASign.pem'), 'rb') as key_signer_file:
-        key_signer = key_signer_file.read()
+        key_bytes = key_signer_file.read()
+        if pem.detect(key_bytes):
+            _, _, key_bytes = pem.unarmor(key_bytes)
 
-    with open(os.path.join('tests', 'testdata', 'BobRSASignByCarl.pem'), 'rb') as cert_file:
-        cert = cert_file.read()
+        key_signer_info = keys.PrivateKeyInfo.load(key_bytes)
 
-    signed_encrypted_message = sign_and_encrypt_message(message, cert_signer, key_signer, cert)
+    cert = asymmetric.load_certificate(os.path.join('tests', 'testdata', 'BobRSASignByCarl.pem'))
+
+    signed_encrypted_message = sign_and_encrypt_message(message, key_signer_info, cert_signer, [cert])
     print(signed_encrypted_message.as_string())
 
 Output::
@@ -251,6 +270,6 @@ This software follows `Semantic Versioning`_
 
 
 .. _asn1crypto: https://github.com/wbond/asn1crypto
-.. _cryptography: https://cryptography.io/en/stable/
+.. _oscrypto: https://github.com/wbond/oscrypto
 .. _python-smime: https://github.com/balena/python-smime
 .. _Semantic Versioning: http://semver.org/

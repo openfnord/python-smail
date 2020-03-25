@@ -44,7 +44,7 @@ setup(
     keywords='smime cryptography email S/MIME encrypt sign',
     packages=find_packages(exclude=['tests', '*_test.py', 'test_*.py']),
     platforms=["all"],
-    install_requires=['cryptography', 'asn1crypto'],
+    install_requires=['asn1crypto', 'oscrypto'],
     setup_requires=['pytest-runner'],
     tests_require=test_requires,
     test_suite='tests',

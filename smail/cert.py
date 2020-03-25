@@ -1,281 +1,44 @@
 # coding: utf-8
 
-"""X509 Certificate API."""
-
-import hashlib
-from abc import ABCMeta
-from abc import abstractmethod
-
-from asn1crypto import cms
-from asn1crypto import pem
-from asn1crypto import x509
-from cryptography.hazmat.backends import default_backend as cryptography_backend
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
+from asn1crypto import cms, x509
+from oscrypto import asymmetric
 
 
-class CertificateError(Exception):
-    """Certificate has errors."""
+def get_recipient_info_for_cert(cert, session_key):
+    # cipher = self._get_public_key_cipher()
+    # if cipher is None:
+    #     return None
+    # encrypted_key = cipher.encrypt(session_key)
+    # tbs_cert = self._cert["tbs_certificate"]
+    # TODO: use subject_key_identifier when available
 
-    pass
+    assert isinstance(cert, asymmetric.Certificate)
 
+    # ToDo(frennkie) find a better way to copy and build the value for "issue"
 
-class PublicKeyCipher(object):
-    __metaclass__ = ABCMeta
+    ordered_dict = cert.asn1['tbs_certificate']['issuer'].native
+    _issuer = x509.Name.build(name_dict={**ordered_dict}, use_printable=True)
 
-    algo = None
+    _serial = cert.asn1['tbs_certificate']['serial_number'].native
+    _algorithm = cert.public_key.algorithm
 
-    @abstractmethod
-    def encrypt(self, session_key):
-        return NotImplemented
+    _encrypted_key = asymmetric.rsa_pkcs1v15_encrypt(cert.public_key, session_key)
 
-    @property
-    def parameters(self):
-        return NotImplemented
-
-
-class RSAPublicKeyCipher(PublicKeyCipher):
-    algo = "rsa"
-
-    def __init__(self, public_key_info):
-        rsaparams = public_key_info["public_key"].native
-        key = rsa.RSAPublicNumbers(rsaparams["public_exponent"], rsaparams["modulus"])
-        backend = cryptography_backend()
-        self._cipher = key.public_key(backend)
-        self._padding = padding.PKCS1v15()
-
-    def encrypt(self, session_key):
-        return self._cipher.encrypt(session_key, self._padding)
-
-    @property
-    def parameters(self):
-        # AlgorithmIdentifier parameters is always NULL
-        return None
-
-
-class Certificate(object):
-    """X509 certificates."""
-
-    PEM_MARKERS = ("CERTIFICATE",)
-
-    def __init__(self, der_string):
-        """Initialize from a DER string.
-
-        Args:
-            der_string: a binary string containing the DER-encoded
-                certificate.
-        """
-        self._cert = x509.Certificate.load(der_string)
-
-    def __eq__(self, other):
-        if isinstance(other, type(self)):
-            return self.is_identical_to(other)
-        else:
-            return NotImplemented
-
-    def __ne__(self, other):
-        are_equal = self.__eq__(other)
-
-        if are_equal is NotImplemented:
-            return NotImplemented
-        else:
-            return not are_equal
-
-    def __hash__(self):
-        return hash(self.fingerprint())
-
-    def __str__(self):
-        return self._cert.debug()
-
-    @classmethod
-    def from_pem(cls, byte_string):
-        """Read a single PEM-encoded certificate from a byte string.
-
-        Args:
-            byte_string: the certificate string.
-
-        Returns:
-            a Certificate object.
-        """
-        _, _, der_bytes = pem.unarmor(byte_string)
-        return cls.from_der(der_bytes)
-
-    @classmethod
-    def from_der(cls, byte_string):
-        """Read a single DER-encoded certificate from a byte rstring.
-
-        This is just an alias to __init__ to match from_pem().
-
-        Args:
-            byte_string: the certificate string.
-
-        Returns:
-            a Certificate object.
-        """
-        return cls(byte_string)
-
-    @classmethod
-    def from_pem_file(cls, pem_file):
-        """Read a single PEM-encoded certificate from a file.
-
-        Args:
-            pem_file: the certificate file.
-
-        Returns:
-            a Certificate object
-        """
-        with open(pem_file, "rb") as pem_cert_file:
-            return cls.from_pem(pem_cert_file.read())
-
-    @classmethod
-    def from_der_file(cls, der_file):
-        """Read a single DER-encoded certificate from a file.
-
-        Args:
-            der_file: the certificate file.
-
-        Returns:
-            a Certificate object.
-        """
-        with open(der_file, "rb") as der_cert_file:
-            return cls.from_der(der_cert_file.read())
-
-    def to_der(self):
-        """Get the DER-encoding of the certificate."""
-        return self._cert.dump()
-
-    def to_pem(self):
-        """Get the PEM-encoding of the certificate."""
-        return pem.armor(self.PEM_MARKERS[0], self.to_der())
-
-    def is_identical_to(self, other_cert):
-        """Returns True if this certificate is identical to |other_cert|."""
-        return self.to_der() == other_cert.to_der()
-
-    def to_asn1(self):
-        """Get a copy of the ASN.1 representation of the certificate."""
-        return x509.Certificate.load(self._cert.dump())
-
-    @property
-    def self_signed(self):
-        """Is self signed?
-
-        Returns:
-            True or False.
-        """
-        return (
-                self._cert["tbs_certificate"]["issuer"] == self._cert["tbs_certificate"]["subject"]
-        )
-
-    def fingerprint(self, hashfunc="sha1"):
-        """Get the certificate fingerprint.
-
-        Args:
-            hashfunc: name of a hash function. Algorithms always present are
-                'md5', 'sha1', 'sha224', 'sha256', 'sha384', and 'sha512'.
-        Returns:
-            a (binary) hash digest of the DER encoding.
-        """
-        h = hashlib.new(hashfunc)
-        h.update(self._cert.dump())
-        return h.digest()
-
-    def key_hash(self, hashfunc="sha1"):
-        """Get the certificate's public key hash.
-
-        Args:
-            hashfunc: name of a hash function. Algorithms always present are
-                'md5', 'sha1', 'sha224', 'sha256', 'sha384', and 'sha512'.
-        Returns:
-            a (binary) hash digest of the public key.
-        """
-        h = hashlib.new(hashfunc)
-        h.update(self._cert["tbs_certificate"]["subject_public_key_info"].dump())
-        return h.digest()
-
-    def _get_public_key_cipher(self):
-        """
-        :return:
-            The PublicKey object for this certificate
-        """
-        algorithms = {RSAPublicKeyCipher.algo: RSAPublicKeyCipher}
-        public_key_info = self._cert.public_key
-        algorithm = public_key_info.algorithm
-        if algorithm not in algorithms:
-            return None
-        t = algorithms[algorithm]
-        return t(public_key_info)
-
-    def recipient_info(self, session_key):
-        cipher = self._get_public_key_cipher()
-        if cipher is None:
-            return None
-        encrypted_key = cipher.encrypt(session_key)
-        tbs_cert = self._cert["tbs_certificate"]
-        # TODO: use subject_key_identifier when available
-        return cms.RecipientInfo(
-            name="ktri",
-            value={
-                "version": "v0",
-                "rid": cms.RecipientIdentifier(
-                    name="issuer_and_serial_number",
-                    value={
-                        "issuer": tbs_cert["issuer"],
-                        "serial_number": tbs_cert["serial_number"],
-                    },
-                ),
-                "key_encryption_algorithm": {
-                    "algorithm": cipher.algo,
-                    "parameters": cipher.parameters,
+    return cms.RecipientInfo(
+        name="ktri",
+        value={
+            "version": "v0",
+            "rid": cms.RecipientIdentifier(
+                name="issuer_and_serial_number",
+                value={
+                    "issuer": _issuer,
+                    "serial_number": _serial,
                 },
-                "encrypted_key": encrypted_key,
+            ),
+            "key_encryption_algorithm": {
+                "algorithm": _algorithm,
+                "parameters": None,
             },
-        )
-
-
-def certs_from_pem(pem_byte_string):
-    """Read multiple PEM-encoded certificates from a byte string.
-
-    Args:
-        pem_byte_string: the certificate byte string.
-
-    Yields:
-        Certificate objects.
-    """
-
-    for _, _, der_bytes in pem.unarmor(pem_byte_string, multiple=True):
-        yield Certificate.from_der(der_bytes)
-
-
-def key_and_certs_from_pkcs12(data, password):
-    """Load key, cert and additional certs from pkcs12 file
-
-    PKCS12 is a binary format described in RFC 7292. It can contain
-    certificates, keys, and more. PKCS12 files commonly have a pfx or
-    p12 file suffix.
-
-    Args:
-        data (bytes-like) – The binary data.
-        password (bytes-like) – The password to use to decrypt the data. None
-            if the PKCS12 is not encrypted.
-
-    :Returns:
-        A tuple of (private_key, certificate, additional_certificates). private_key
-            is a private key type or None, certificate is either the Certificate whose
-            public key matches the private key in the PKCS 12 object or None, and
-            additional_certificates is a list of all other Certificate instances in the
-            PKCS12 object.
-    """
-
-    if isinstance(password, str):
-        password = password.encode()
-
-    key, cert_x509, add_certs_x509 = load_key_and_certificates(data, password, cryptography_backend())
-
-    cert = Certificate.from_pem(cert_x509.public_bytes(serialization.Encoding.PEM))
-    add_certs = [Certificate.from_pem(x.public_bytes(serialization.Encoding.PEM))
-                 for x in add_certs_x509]
-
-    return key, cert, add_certs
+            "encrypted_key": _encrypted_key,
+        },
+    )
