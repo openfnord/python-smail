@@ -31,10 +31,28 @@ class UnsupportedSignatureError(Exception):
     pass
 
 
-def sign_message(msg, key, cert, other_certs=None, digest_alg='sha256', sig_alg='rsa',
+def sign_message(message, key_signer, cert_signer,
+                 digest_alg='sha256', sig_alg='rsa',
                  attrs=True, prefix="", allow_deprecated=False):
-    if other_certs is None:
-        other_certs = []
+    """Takes a message, signs it and returns a new signed message object.
+
+    Args:
+        message (:obj:`email.message.Message`): The message object to sign and encrypt.
+        key_signer (:obj:`asn1crypto.keys.PrivateKeyInfo`): Private key used to sign the
+            message.
+        cert_signer (:obj:`asn1crypto.x509.Certificate`): Certificate/Public Key
+            (belonging to Private Key) that will be included in the signed message.
+        digest_alg (str): Digest (Hash) Algorithm - e.g. "sha256"
+        sig_alg (str): Signature Algorithm
+        attrs (bool): Whether to include signed attributes (signing time). Default
+            to True
+        prefix (str): Content type prefix (e.g. "x-"). Default to ""
+        allow_deprecated (bool): Whether deprecated digest algorithms should  be allowed.
+
+    Returns:
+         :obj:`email.message.Message`: signed message
+
+    """
 
     if digest_alg == "md5":
         micalg = "md5"
@@ -59,7 +77,7 @@ def sign_message(msg, key, cert, other_certs=None, digest_alg='sha256', sig_alg=
         raise UnsupportedSignatureError("{} is unknown or unsupported".format(sig_alg))
 
     # make a deep copy of original message to avoid any side effects (original will not be touched)
-    copied_msg = deepcopy(msg)
+    copied_msg = deepcopy(message)
 
     headers = {}
     # besides some special ones (e.g. Content-Type) remove all headers before signing the body content
@@ -74,7 +92,7 @@ def sign_message(msg, key, cert, other_certs=None, digest_alg='sha256', sig_alg=
 
     data_unsigned = copied_msg.as_bytes()
     data_unsigned = data_unsigned.replace(b'\n', b'\r\n')
-    data_signed = sign_bytes(data_unsigned, key, cert, other_certs, digest_alg, sig_alg, attrs=attrs, signed_value=None)
+    data_signed = sign_bytes(data_unsigned, key_signer, cert_signer, digest_alg, sig_alg, attrs=attrs)
     data_signed = base64.encodebytes(data_signed)
 
     new_msg = MIMEMultipart("signed",

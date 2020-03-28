@@ -14,6 +14,23 @@ def make_msg(sender_addr, sender_name=None,
              recipients=None, subject=None,
              text=None, html=None,
              img_list=None, attachments=None):
+    """Creates and returns a message
+
+    Args:
+        sender_addr (str): The sender address (e.g. alice@example.com).
+        sender_name (str): The sender name  (e.g. Alice).
+        recipients (:obj:`list` of str or :obj:`list` of :obj:`tuple` with (addr, name)): Who
+            the message should go to.
+        subject (str): The message subject.
+        text (str): The text content to include.
+        html (str): The HTML content to include.
+        img_list (:obj:`list` of str`): A list of file path strings.
+        attachments (:obj:`list` of str): A list of file path strings.
+
+    Returns:
+        :obj:`email.message.Message`
+
+    """
 
     recipient_addr = []
     for recipient in recipients:
@@ -35,10 +52,10 @@ def make_msg(sender_addr, sender_name=None,
     msg_alternative = MIMEMultipart('alternative')
     msg_related.attach(msg_alternative)
 
-    msg_text = MIMEText(text.encode('utf-8'), 'plain', 'utf-8')
+    msg_text = MIMEText(text, 'plain', 'utf-8')
     msg_alternative.attach(msg_text)
 
-    msg_html = MIMEText(html.encode('utf-8'), 'html', 'utf-8')
+    msg_html = MIMEText(html, 'html', 'utf-8')
     msg_alternative.attach(msg_html)
 
     if img_list:

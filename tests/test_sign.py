@@ -66,7 +66,7 @@ class TestSign:
 
             key_signer_info = keys.PrivateKeyInfo.load(key_bytes)
 
-        msg_signed = sign_message(msg, key_signer_info, cert_signer, other_certs=[],
+        msg_signed = sign_message(msg, key_signer_info, cert_signer,
                                   digest_alg=digest_alg, sig_alg=sig_alg,
                                   allow_deprecated=depre)
 

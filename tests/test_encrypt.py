@@ -109,7 +109,7 @@ class EncryptTest:
             "Goodbye!",
         ]
         with open(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem'), 'rb') as cert:
-            result = encrypt_message("\n".join(message), cert.read(), algorithm="aes256_cbc")
+            result = encrypt_message("\n".join(message), cert.read())
 
         fd, tmp_file = mkstemp()
         os.write(fd, result.encode())

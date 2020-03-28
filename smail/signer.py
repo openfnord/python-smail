@@ -37,28 +37,49 @@ from asn1crypto.x509 import Certificate
 from oscrypto import asymmetric
 
 
-def sign_bytes(data_unsigned, key, cert, other_certs,
+def sign_bytes(data_unsigned, key, cert,
                digest_alg="sha256", sig_alg='rsa', attrs=True, signed_value=None):
-    """sign_bytes
+    """Takes bytes, creates a ContentInfo structure and returns it as signed bytes
 
     cert is mandatory for now (used to include the sender certificate in the
     CMS "certificates" part
+
+    Args:
+        data_unsigned (bytes):
+        key (:obj:`asn1crypto.keys.PrivateKeyInfo`): Private key used to sign the
+            message.
+        cert (:obj:`asn1crypto.x509.Certificate`): Certificate/Public Key
+            (belonging to Private Key) that will be included in the signed message.
+        digest_alg (str): Digest (Hash) Algorithm - e.g. "sha256"
+        sig_alg (str): Signature Algorithm
+        attrs (bool): Whether to include signed attributes (signing time). Default
+            to True
+        signed_value: unknown
+
+    Returns:
+         bytes: signed byte string
+
+    Todo:
+        check "other cert signer" .. does this make sense?
 
     """
     if not isinstance(data_unsigned, bytes):
         raise AttributeError("only bytes supported")
 
     if not isinstance(key, keys.PrivateKeyInfo):
-        raise AttributeError("only keys.PrivateKeyInfo supported")
+        raise AttributeError("only asn1crypto.keys.PrivateKeyInfo supported")
 
     if not isinstance(cert, Certificate):
         raise AttributeError("only asn1crypto.x509.Certificate supported")
 
     certificates = [cert]
-    for i in range(len(other_certs)):
-        if not isinstance(other_certs[i], Certificate):
+
+    # Todo(frennkie): check "other cert signer" .. does this make sense?
+    other_cert_signers = []
+    for i in range(len(other_cert_signers)):
+        if not isinstance(other_cert_signers[i], Certificate):
             raise AttributeError("only asn1crypto.x509.Certificate supported")
-        certificates.append(other_certs[i])
+        certificates.append(other_cert_signers[i])
 
     if digest_alg not in ["md5", "sha1", "sha256", "sha512"]:
         raise AttributeError("digest algorithm unsupported: {}".format(digest_alg))
