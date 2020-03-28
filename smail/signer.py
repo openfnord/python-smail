@@ -37,7 +37,8 @@ from asn1crypto.x509 import Certificate
 from oscrypto import asymmetric
 
 
-def sign_bytes(data_unsigned, key, cert, other_certs, hashalgo, attrs=True, signed_value=None, pss=False):
+def sign_bytes(data_unsigned, key, cert, other_certs,
+               digest_alg="sha256", sig_alg='rsa', attrs=True, signed_value=None):
     """sign_bytes
 
     cert is mandatory for now (used to include the sender certificate in the
@@ -59,11 +60,11 @@ def sign_bytes(data_unsigned, key, cert, other_certs, hashalgo, attrs=True, sign
             raise AttributeError("only asn1crypto.x509.Certificate supported")
         certificates.append(other_certs[i])
 
-    if hashalgo not in ["md5", "sha1", "sha224", "sha256", "sha384", "sha512"]:
-        raise AttributeError("hash algorithm unsupported: {}".format(hashalgo))
+    if digest_alg not in ["md5", "sha1", "sha256", "sha512"]:
+        raise AttributeError("digest algorithm unsupported: {}".format(digest_alg))
 
     if signed_value is None:
-        signed_value = getattr(hashlib, hashalgo)(data_unsigned).digest()
+        signed_value = getattr(hashlib, digest_alg)(data_unsigned).digest()
     signed_time = datetime.now(tz=timezone.utc)
 
     signer = {
@@ -74,33 +75,34 @@ def sign_bytes(data_unsigned, key, cert, other_certs, hashalgo, attrs=True, sign
                 'serial_number': cert.serial_number,
             }),
         }),
-        'digest_algorithm': algos.DigestAlgorithm({'algorithm': hashalgo}),
+        'digest_algorithm': algos.DigestAlgorithm({'algorithm': digest_alg}),
         'signature': signed_value,
     }
-    if pss:
-        raise NotImplementedError("Not yet fully implemented/tested")
-        # if isinstance(key, keys.PrivateKeyInfo):
-        #     salt_length = key.byte_size - hashlib.SHA512.digest_size - 2  # TODO(frennkie) check this
-        #     salt_length = hashlib.sha512().digest_size
-        # else:
-        #     salt_length = padding.calculate_max_pss_salt_length(key, hashes.SHA512)
-        #
-        # signer['signature_algorithm'] = algos.SignedDigestAlgorithm({
-        #     'algorithm': 'rsassa_pss',
-        #     'parameters': algos.RSASSAPSSParams({
-        #         'hash_algorithm': algos.DigestAlgorithm({'algorithm': 'sha512'}),
-        #         'mask_gen_algorithm': algos.MaskGenAlgorithm({
-        #             'algorithm': algos.MaskGenAlgorithmId('mgf1'),
-        #             'parameters': {
-        #                 'algorithm': algos.DigestAlgorithmId('sha512'),
-        #             }
-        #         }),
-        #         'salt_length': algos.Integer(salt_length),
-        #         'trailer_field': algos.TrailerField(1)
-        #     })
-        # })
-    else:
+
+    pss_digest_alg = digest_alg  # use same digest algorithm for pss signature as for message
+
+    if sig_alg == "rsa":
         signer['signature_algorithm'] = algos.SignedDigestAlgorithm({'algorithm': 'rsassa_pkcs1v15'})
+
+    elif sig_alg == "pss":
+        salt_length = getattr(hashlib, pss_digest_alg)().digest_size
+        signer['signature_algorithm'] = algos.SignedDigestAlgorithm({
+            'algorithm': 'rsassa_pss',
+            'parameters': algos.RSASSAPSSParams({
+                'hash_algorithm': algos.DigestAlgorithm({'algorithm': pss_digest_alg}),
+                'mask_gen_algorithm': algos.MaskGenAlgorithm({
+                    'algorithm': algos.MaskGenAlgorithmId('mgf1'),
+                    'parameters': {
+                        'algorithm': algos.DigestAlgorithmId(pss_digest_alg),
+                    }
+                }),
+                'salt_length': algos.Integer(salt_length),
+                'trailer_field': algos.TrailerField(1)
+            })
+        })
+
+    else:
+        raise AttributeError("signature algorithm unsupported: {}".format(sig_alg))
 
     if attrs:
         if attrs is True:
@@ -124,7 +126,7 @@ def sign_bytes(data_unsigned, key, cert, other_certs, hashalgo, attrs=True, sign
     config = {
         'version': 'v1',
         'digest_algorithms': cms.DigestAlgorithms((
-            algos.DigestAlgorithm({'algorithm': hashalgo}),
+            algos.DigestAlgorithm({'algorithm': digest_alg}),
         )),
         'encap_content_info': {
             'content_type': 'data',
@@ -146,19 +148,15 @@ def sign_bytes(data_unsigned, key, cert, other_certs, hashalgo, attrs=True, sign
         to_sign = data_unsigned
 
     key = asymmetric.load_private_key(key)
-    if pss:
-        raise NotImplementedError("Not yet fully implemented/tested")
-        # signed_value_signature = asymmetric.rsa_pss_sign(
-        #     key,
-        #     to_sign,
-        #     'sha512'
-        # )
+
+    if sig_alg == "rsa":
+        signed_value_signature = asymmetric.rsa_pkcs1v15_sign(key, to_sign, digest_alg.lower())
+
+    elif sig_alg == "pss":
+        signed_value_signature = asymmetric.rsa_pss_sign(key, to_sign, pss_digest_alg)
+
     else:
-        signed_value_signature = asymmetric.rsa_pkcs1v15_sign(
-            key,
-            to_sign,
-            hashalgo.lower()
-        )
+        raise AttributeError("signature algorithm unsupported: {}".format(sig_alg))
 
     data_signed['content']['signer_infos'][0]['signature'] = signed_value_signature
 

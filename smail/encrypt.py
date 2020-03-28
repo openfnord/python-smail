@@ -8,34 +8,54 @@ from email.mime.text import MIMEText
 from asn1crypto import cms
 from oscrypto import asymmetric
 
-from .block import get_cipher
+from .block import TripleDES, AES
 from .cert import get_recipient_info_for_cert
 from .utils import wrap_lines
 
 
-def __iterate_recipient_infos(certs, session_key):
+def __iterate_recipient_infos(certs, session_key, key_enc_alg="rsaes_pkcs1v15"):
     for cert in certs:
         if not isinstance(cert, asymmetric.Certificate):
             raise NotImplementedError("foo")
 
-        recipient_info = get_recipient_info_for_cert(cert, session_key)
+        recipient_info = get_recipient_info_for_cert(cert, session_key, key_enc_alg=key_enc_alg)
         # print("\nrecipient_info\n{}".format(recipient_info.native))
         yield recipient_info
 
 
-def encrypt_message(message, certs_recipients, algorithm="aes256_cbc"):
-    """
-    Takes the contents of the message parameter, formatted as in RFC 2822 (type str or message), and encrypts them,
-    so that they can only be read by the intended recipient specified by pubkey.
-    :return: the new encrypted message (type str or message, as per input).
+def encrypt_message(message, certs_recipients, content_enc_alg="aes256_cbc", key_enc_alg="rsaes_pkcs1v15"):
+    """Takes a message and returns a new message with the original content as encrypted body
+
+    Take the contents of the message parameter, formatted as in RFC 2822 (type bytes, str or message)
+    and encrypts them, so that they can only be read by the intended recipient specified by pubkey.
+
+    Args:
+        message (bytes, str, :obj:`message`): Message to be encrypted.
+        certs_recipients (:obj:`list` of :obj:`oscrypto.asymmetric.Certificate`):
+        key_enc_alg (str): Key Encryption Algorithm
+        content_enc_alg (str): Content Encryption Algorithm
+
+    Returns:
+        :obj:`message`: The new encrypted message (type str or message, as per input).
+
     """
 
     # TODO(frennkie) update doc string
     # TODO(frennkie) cert_recipients..?!
 
     # Get the chosen block cipher
-    block_cipher = get_cipher(algorithm)
-    if block_cipher is None:
+    if content_enc_alg == "tripledes_3key":
+        block_cipher = TripleDES(content_enc_alg, key_size=24)
+    elif content_enc_alg == "aes128_cbc":
+        block_cipher = AES(content_enc_alg, key_size=16)
+    elif content_enc_alg == "aes256_cbc":
+        block_cipher = AES(content_enc_alg, key_size=32)
+    else:
+        raise ValueError("Unknown block algorithm")
+
+    if key_enc_alg == "rsaes_pkcs1v15":
+        pass
+    else:
         raise ValueError("Unknown block algorithm")
 
     # Get the message content. This could be a string, bytes or a message object

@@ -38,7 +38,9 @@ def _pop_headers(msg, blacklist=None):
     return headers
 
 
-def sign_and_encrypt_message(message, key_signer, cert_signer, certs_recipients, algorithm="aes256_cbc"):
+def sign_and_encrypt_message(message, key_signer, cert_signer, certs_recipients,
+                             digest_alg='sha256', sig_alg='rsa',
+                             content_enc_alg="aes256_cbc", key_enc_alg="rsaes_pkcs1v15"):
     # TODO(frennkie) rewrite this!
     # Get the message content. This could be a string, bytes or a message object
     passed_as_str = isinstance(message, str)
@@ -75,7 +77,8 @@ def sign_and_encrypt_message(message, key_signer, cert_signer, certs_recipients,
     # payload_signed = sign_message(payload, key_signer, cert_signer)
     # message_signed = email.message_from_bytes(payload_signed)
 
-    message_signed = sign_message(copied_msg, key_signer, cert_signer)
+    message_signed = sign_message(copied_msg, key_signer, cert_signer,
+                                  digest_alg=digest_alg, sig_alg=sig_alg)
 
     # print("---")
     # print("Signed")
@@ -95,7 +98,8 @@ def sign_and_encrypt_message(message, key_signer, cert_signer, certs_recipients,
     # print(message_signed)
     # print("---")
 
-    message_signed_enveloped = encrypt_message(message_signed, certs_recipients, algorithm=algorithm)
+    message_signed_enveloped = encrypt_message(message_signed, certs_recipients,
+                                               content_enc_alg=content_enc_alg, key_enc_alg=key_enc_alg)
 
     # print("---")
     # print("Signed+Enveloped")

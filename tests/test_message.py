@@ -77,7 +77,9 @@ class TestMessage:
                                   'plain_message_signed_by_alice_encrypted_for_bob.eml',
                                   'plain_message_signed_by_alice_md5.eml',
                                   'plain_message_signed_by_alice_sha1.eml',
-                                  'plain_message_signed_by_alice_sha256.eml'}
+                                  'plain_message_signed_by_alice_sha1_pss.eml',
+                                  'plain_message_signed_by_alice_sha256.eml',
+                                  'plain_message_signed_by_alice_sha256_pss.eml'}
 
         # (re-)check that everything is a "Message"
         msgs = []
@@ -99,12 +101,19 @@ class TestMessage:
 
     # ToDo(frennkie) add test that raises deprecated digest error
 
-    @pytest.mark.parametrize("output_file_eml,pub_key,private_key,hashalgo,deprecated", [
-        ("plain_message_signed_by_alice_md5.eml", "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "md5", True),
-        ("plain_message_signed_by_alice_sha1.eml", "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "sha1", True),
-        ("plain_message_signed_by_alice_sha256.eml", "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "sha256", False)
+    @pytest.mark.parametrize("output_file_eml,pub_key,private_key,digest_alg,sig_alg,depr", [
+        ("plain_message_signed_by_alice_md5.eml",
+         "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "md5", "rsa", True),
+        ("plain_message_signed_by_alice_sha1.eml",
+         "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "sha1", "rsa", True),
+        ("plain_message_signed_by_alice_sha1_pss.eml",
+         "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "sha1", "pss", True),
+        ("plain_message_signed_by_alice_sha256.eml",
+         "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "sha256", "rsa", False),
+        ("plain_message_signed_by_alice_sha256_pss.eml",
+         "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", "sha256", "pss", False)
     ])
-    def test_plain_message_signed_by_alice(self, output_file_eml, pub_key, private_key, hashalgo, deprecated):
+    def test_plain_message_signed_by_alice(self, output_file_eml, pub_key, private_key, digest_alg, sig_alg, depr):
         file_path = os.path.join(self.test_dir, output_file_eml)
 
         msg = get_plain_text_message()
@@ -128,7 +137,9 @@ class TestMessage:
         assert isinstance(key_signer_info, keys.PrivateKeyInfo)
         assert isinstance(key_signer, keys.RSAPrivateKey)
 
-        signed_message = sign_message(msg, key_signer_info, cert_signer, hashalgo=hashalgo, allow_deprecated=deprecated)
+        signed_message = sign_message(msg, key_signer_info, cert_signer,
+                                      digest_alg=digest_alg, sig_alg=sig_alg,
+                                      allow_deprecated=depr)
 
         assert isinstance(signed_message, email.message.Message)
 
@@ -142,7 +153,7 @@ class TestMessage:
         ("plain_message_encrypted_for_alice_and_bob_aes256_cbc.eml",
          ("AliceRSASignByCarl.pem", "BobRSASignByCarl.pem"), "aes256_cbc"),
     ])
-    def test_plain_message_encrypted2(self, output_file_eml, pub_keys, algorithm):
+    def test_plain_message_encrypted(self, output_file_eml, pub_keys, algorithm):
         file_path = os.path.join(self.test_dir, output_file_eml)
 
         msg = get_plain_text_message()

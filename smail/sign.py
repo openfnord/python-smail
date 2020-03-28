@@ -23,26 +23,40 @@ class DeprecatedDigestError(Exception):
     pass
 
 
-def sign_message(msg, key, cert, other_certs=None, hashalgo='sha256', attrs=True, pss=False, allow_deprecated=False):
+class UnsupportedSignatureError(Exception):
+    """
+    An exception indicating that an unsupported signature algorithm was specified
+    """
+
+    pass
+
+
+def sign_message(msg, key, cert, other_certs=None, digest_alg='sha256', sig_alg='rsa',
+                 attrs=True, prefix="", allow_deprecated=False):
     if other_certs is None:
         other_certs = []
 
-    if hashalgo == "md5":
+    if digest_alg == "md5":
         micalg = "md5"
         if allow_deprecated is False:
-            raise DeprecatedDigestError("{} is deprecated".format(hashalgo))
-    elif hashalgo == "sha1":
+            raise DeprecatedDigestError("{} is deprecated".format(digest_alg))
+    elif digest_alg == "sha1":
         micalg = "sha-1"
         if allow_deprecated is False:
-            raise DeprecatedDigestError("{} is deprecated".format(hashalgo))
-    elif hashalgo == "sha256":
+            raise DeprecatedDigestError("{} is deprecated".format(digest_alg))
+    elif digest_alg == "sha256":
         micalg = "sha-256"
-    elif hashalgo == "sha512":
+    elif digest_alg == "sha512":
         micalg = "sha-512"
     else:
-        raise UnsupportedDigestError("{} is unknown or unsupported".format(hashalgo))
+        raise UnsupportedDigestError("{} is unknown or unsupported".format(digest_alg))
 
-    prefix = ['x-', ''][pss]
+    if sig_alg == "rsa":
+        pass
+    elif sig_alg == "pss":
+        pass
+    else:
+        raise UnsupportedSignatureError("{} is unknown or unsupported".format(sig_alg))
 
     # make a deep copy of original message to avoid any side effects (original will not be touched)
     copied_msg = deepcopy(msg)
@@ -60,7 +74,7 @@ def sign_message(msg, key, cert, other_certs=None, hashalgo='sha256', attrs=True
 
     data_unsigned = copied_msg.as_bytes()
     data_unsigned = data_unsigned.replace(b'\n', b'\r\n')
-    data_signed = sign_bytes(data_unsigned, key, cert, other_certs, hashalgo, attrs=attrs, signed_value=None, pss=pss)
+    data_signed = sign_bytes(data_unsigned, key, cert, other_certs, digest_alg, sig_alg, attrs=attrs, signed_value=None)
     data_signed = base64.encodebytes(data_signed)
 
     new_msg = MIMEMultipart("signed",
@@ -74,7 +88,7 @@ def sign_message(msg, key, cert, other_certs=None, hashalgo='sha256', attrs=True
     # attach original message
     new_msg.attach(copied_msg)
 
-    msg_signature = MIMEBase('application', 'x-pkcs7-signature', name="smime.p7s")
+    msg_signature = MIMEBase('application', '{}pkcs7-signature'.format(prefix), name="smime.p7s")
     msg_signature.add_header('Content-Transfer-Encoding', 'base64')
     msg_signature.add_header('Content-Disposition', 'attachment', filename="smime.p7s")
     msg_signature.add_header('Content-Description', 'S/MIME Cryptographic Signature')
