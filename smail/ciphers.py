@@ -7,7 +7,7 @@ from abc import abstractmethod
 from oscrypto import symmetric
 
 
-class BlockCipher:
+class EncryptionCipher:
     __metaclass__ = ABCMeta
 
     @abstractmethod
@@ -23,7 +23,7 @@ class BlockCipher:
         return NotImplemented
 
 
-class AES(BlockCipher):
+class AesCbc(EncryptionCipher):
     algorithm = None
     key_size = None
 
@@ -54,7 +54,7 @@ class AES(BlockCipher):
         return self._iv
 
 
-class TripleDES(BlockCipher):
+class TripleDes(EncryptionCipher):
     algorithm = None
     key_size = None
 
@@ -83,16 +83,3 @@ class TripleDES(BlockCipher):
     @property
     def parameters(self):
         return self._iv
-
-
-def get_cipher(algorithm):
-    _algorithms = {
-        "tripledes_3key": (TripleDES, [24]),
-        "aes128_cbc": (AES, [16]),
-        "aes256_cbc": (AES, [32]),
-    }
-    if algorithm in _algorithms:
-        cipher, parameters = _algorithms[algorithm]
-        return cipher(algorithm, *parameters)
-    else:
-        return None

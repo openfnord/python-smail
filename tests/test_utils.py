@@ -15,20 +15,6 @@ class PrintUtilTest(unittest.TestCase):
         self.assertEqual(["hello", "world"],
                          utils.wrap_lines(long_multiline_string, 0))
 
-    def test_append_lines_appends(self):
-        buf = ["hello"]
-        lines = ["beautiful", "world"]
-        # "hellobeautiful" is more than 10 characters long
-        utils.append_lines(lines, 20, buf)
-        self.assertEqual(["hellobeautiful", "world"], buf)
-
-    def test_append_lines_honours_wrap(self):
-        buf = ["hello"]
-        lines = ["beautiful", "world"]
-        # "hellobeautiful" is more than 10 characters long
-        utils.append_lines(lines, 10, buf)
-        self.assertEqual(["hello", "beautiful", "world"], buf)
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,16 +2,14 @@
 import os
 
 import pytest
-from asn1crypto import x509, pem, keys, core
-from asn1crypto.cms import IssuerAndSerialNumber
+from asn1crypto import cms, core, keys, pem, x509
 from oscrypto import asymmetric
 
-from smail.cert import get_recipient_info_for_cert
+from smail.encrypt import get_recipient_info_for_cert
 from .conftest import FIXTURE_DIR
 
 
 class TestCert:
-
     @pytest.mark.parametrize("file_name,serial,issuer,sig_algo", [
         ("AliceRSA2048.pem", 84724501279626539432081479560025710686849292165, "CarlRSA2048", "rsassa_pkcs1v15"),
         ("AliceECp256.pem", 70400699072669113604691775782881115307289436427, "CarlECp256", "ecdsa"),
@@ -36,7 +34,7 @@ class TestCert:
         ("AliceRSA2048.pem", 84724501279626539432081479560025710686849292165, "CarlRSA2048", "rsa"),
         ("AliceECp256.pem", 70400699072669113604691775782881115307289436427, "CarlECp256", "ec")
         # TODO(frennkie) does not work on Windows.. check Linux; maybe open issue with oscrypto
-        # ("AlicePSS2048.pem", 643522079216047803454536659318317487253176610229, "CarlPSS2048", "rsassa_pss")
+        # ("AlicePSS2048.pem", 643522079216047803454536659318317487253176610229, "CarlPSS2048", "rsa")
     ])
     def test_oscrypto_load_certificate(self, file_name, serial, issuer, sig_algo):
         cert = asymmetric.load_certificate(os.path.join(FIXTURE_DIR, file_name))
@@ -101,7 +99,7 @@ class TestCert:
         session_key = os.urandom(16)
         ri = get_recipient_info_for_cert(cert, session_key)
 
-        assert isinstance(ri.chosen['rid'].chosen, IssuerAndSerialNumber)
+        assert isinstance(ri.chosen['rid'].chosen, cms.IssuerAndSerialNumber)
         assert isinstance(ri.chosen['rid'].chosen['issuer'].contents, bytes)
 
         assert cert.asn1['tbs_certificate']['issuer'].native[key] == value

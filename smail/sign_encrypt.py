@@ -7,13 +7,21 @@ from smail.sign import sign_message
 
 
 def _pop_headers(msg, blacklist=None):
-    """ remove and return headers
+    """Removes headers from message and removes list of removed headers.
 
-    Attention: side effects - this will remove headers from `msg`
-    Attention: duplicate headers are not supported at this point
+    Args:
+        msg (:obj:`email.message.Message`): The message object to sign and encrypt.
+        blacklist (:obj:`list` of `str`):
 
-    :param msg: `email.message.Message`
-    :return: list of `tuples`
+    Returns:
+        list: removed headers
+
+    Attention:
+        side effect:  will remove headers from passed in `msg`
+
+    Attention:
+        duplicate headers are not supported at this point
+
     """
 
     blacklisted_headers = set()
@@ -39,8 +47,35 @@ def _pop_headers(msg, blacklist=None):
 
 
 def sign_and_encrypt_message(message, key_signer, cert_signer, certs_recipients,
-                             digest_alg='sha256', sig_alg='rsa',
+                             digest_alg="sha256", sig_alg="rsa",
+                             attrs=True, prefix="",
                              content_enc_alg="aes256_cbc", key_enc_alg="rsaes_pkcs1v15"):
+    """Takes a message, signs and encrypts it and returns a new signed and encrypted message object.
+
+    Args:
+        message (:obj:`email.message.Message`): The message object to sign and encrypt.
+        key_signer (:obj:`asn1crypto.keys.PrivateKeyInfo`): Private key used to sign the
+            message.
+        cert_signer (:obj:`asn1crypto.x509.Certificate`): Certificate/Public Key
+            (belonging to Private Key) that will be included in the signed message.
+        certs_recipients (:obj:`list` of :obj:`asn1crypto.x509.Certificate`): List of
+            certificates for which the message should be encrypted.
+        digest_alg (str): Digest (Hash) Algorithm - e.g. "sha256"
+        sig_alg (str): Signature Algorithm
+        attrs (bool): Whether to include signed attributes (signing time). Default
+            to True
+        prefix (str): Content type prefix (e.g. "x-"). Default to ""
+        content_enc_alg (str): Content Encryption Algorithm - e.g. aes256_cbc
+        key_enc_alg: Key Encryption Algorithm
+
+    Returns:
+         :obj:`email.message.Message`: signed and encrypted message
+
+    Todo:
+        payload not used anymore.. does this still work for MultiPart?!
+
+    """
+
     # TODO(frennkie) rewrite this!
     # Get the message content. This could be a string, bytes or a message object
     passed_as_str = isinstance(message, str)
@@ -78,7 +113,8 @@ def sign_and_encrypt_message(message, key_signer, cert_signer, certs_recipients,
     # message_signed = email.message_from_bytes(payload_signed)
 
     message_signed = sign_message(copied_msg, key_signer, cert_signer,
-                                  digest_alg=digest_alg, sig_alg=sig_alg)
+                                  digest_alg=digest_alg, sig_alg=sig_alg,
+                                  attrs=attrs, prefix=prefix)
 
     # print("---")
     # print("Signed")
