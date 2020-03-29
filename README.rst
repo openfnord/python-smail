@@ -31,7 +31,6 @@ the e-mail in S/MIME format::
     import os
     from email.mime.text import MIMEText
     from email.utils import formatdate
-    from oscrypto import asymmetric
     from smail import encrypt_message
 
     message = MIMEText("This a plain text body!")
@@ -84,8 +83,8 @@ sign the e-mail in S/MIME format::
     message['To'] = "BobRSA@example.com"
     message['Subject'] = "Text Message - Signed"
 
-    cert_signer = os.path.join('tests', 'testdata', 'AliceRSASignByCarl.pem')
     key_signer = os.path.join('tests', 'testdata', 'AlicePrivRSASign.pem')
+    cert_signer = os.path.join('tests', 'testdata', 'AliceRSASignByCarl.pem')
 
     signed_message = sign_message(message, key_signer, cert_signer)
     print(signed_message.as_string())
@@ -148,7 +147,6 @@ it to sign and encrypt the e-mail (from Alice to Bob) in S/MIME format::
     import os
     from email.mime.text import MIMEText
     from email.utils import formatdate
-    from oscrypto import asymmetric
     from smail import sign_and_encrypt_message
 
     message = MIMEText("This a plain text body!")
@@ -157,8 +155,8 @@ it to sign and encrypt the e-mail (from Alice to Bob) in S/MIME format::
     message['To'] = "BobRSA@example.com"
     message['Subject'] = "Text Message - Signed and Encrypted"
 
-    cert_signer = os.path.join('tests', 'testdata', 'AliceRSASignByCarl.pem')
     key_signer = os.path.join('tests', 'testdata', 'AlicePrivRSASign.pem')
+    cert_signer = os.path.join('tests', 'testdata', 'AliceRSASignByCarl.pem')
 
     cert = os.path.join('tests', 'testdata', 'BobRSASignByCarl.pem')
 
