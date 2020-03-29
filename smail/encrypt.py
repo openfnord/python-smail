@@ -12,6 +12,39 @@ from .ciphers import TripleDes, AesCbc
 from .utils import wrap_lines
 
 
+class UnsupportedAlgorithmError(Exception):
+    """
+    An exception indicating that an unsupported cipher algorithm was specified
+    """
+
+    pass
+
+
+def _get_content_encryption_algorithm(alg):
+    algs = {
+        "tripledes_3key": TripleDes(alg, key_size=24),
+        "aes128_cbc": AesCbc(alg, key_size=16),
+        "aes256_cbc": AesCbc(alg, key_size=32)
+    }
+    try:
+        return algs[alg]
+    except KeyError:
+        raise UnsupportedAlgorithmError("selected algorithm \"{}\" not in: "
+                                        "{}".format(alg, ", ".join(algs.keys())))
+
+
+def _get_key_encryption_algorithm(alg):
+    algs = {
+        "rsaes_pkcs1v15": asymmetric.rsa_pkcs1v15_encrypt,
+        "rsa": asymmetric.rsa_pkcs1v15_encrypt  # rsa is mapped to rsaes_pkcs1v15 in asn1crypto
+    }
+    try:
+        return algs[alg]
+    except KeyError:
+        raise UnsupportedAlgorithmError("selected algorithm \"{}\" not in: "
+                                        "{}".format(alg, ", ".join(algs.keys())))
+
+
 def _iterate_recipient_infos(certs, session_key, key_enc_alg):
     """Yields the recipient identifier data needed for an encrypted message.
 
@@ -52,10 +85,8 @@ def get_recipient_info_for_cert(cert, session_key, key_enc_alg="rsaes_pkcs1v15")
 
     serial = cert.asn1['tbs_certificate']['serial_number'].native
 
-    if key_enc_alg in ["rsa", "rsaes_pkcs1v15"]:  # rsa is mapped to rsaes_pkcs1v15 in asn1crypto
-        encrypted_key = asymmetric.rsa_pkcs1v15_encrypt(cert.public_key, session_key)
-    else:
-        raise NotImplementedError("Unsupported Key Encryption Algorithm")
+    key_enc_func = _get_key_encryption_algorithm(key_enc_alg)
+    encrypted_key = key_enc_func(cert.public_key, session_key)
 
     return cms.RecipientInfo(
         name="ktri",
@@ -82,8 +113,8 @@ def encrypt_message(message, certs_recipients,
     """Takes a message and returns a new message with the original content as encrypted body
 
     Take the contents of the message parameter, formatted as in RFC 2822 (type bytes, str or
-     message) and encrypts them, so that they can only be read by the intended recipient
-     specified by pubkey.
+        message) and encrypts them, so that they can only be read by the intended recipient
+        specified by pubkey.
 
     Args:
         message (bytes, str or :obj:`email.message.Message`): Message to be encrypted.
@@ -109,20 +140,9 @@ def encrypt_message(message, certs_recipients,
         else:
             certificates.append(asymmetric.load_certificate(cert))
 
-    # Get the chosen block cipher
-    if content_enc_alg == "tripledes_3key":
-        block_cipher = TripleDes(content_enc_alg, key_size=24)
-    elif content_enc_alg == "aes128_cbc":
-        block_cipher = AesCbc(content_enc_alg, key_size=16)
-    elif content_enc_alg == "aes256_cbc":
-        block_cipher = AesCbc(content_enc_alg, key_size=32)
-    else:
-        raise ValueError("Unknown block algorithm")
-
-    if key_enc_alg == "rsaes_pkcs1v15":
-        pass
-    else:
-        raise ValueError("Unknown block algorithm")
+    # Check/Get the chosen algorithms for content and key encryption
+    block_cipher = _get_content_encryption_algorithm(content_enc_alg)
+    _ = _get_key_encryption_algorithm(key_enc_alg)
 
     # Get the message content. This could be a string, bytes or a message object
     passed_as_str = isinstance(message, str)

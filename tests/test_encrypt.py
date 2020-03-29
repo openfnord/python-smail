@@ -3,8 +3,6 @@ import os
 from email import message_from_string
 from tempfile import mkstemp
 
-import pytest
-
 from smail.encrypt import encrypt_message
 from smail.utils import get_cmd_output, normalize_line_endings
 from .conftest import FIXTURE_DIR
@@ -79,7 +77,6 @@ class TestEncrypt:
 
         assert "Hey Bob, now you see me..!" == payload[len(payload) - 1]
 
-    @pytest.mark.skip
     def test_message_to_bob_tripledes_cbc(self, ):
         self.assert_message_to_bob("tripledes_3key")
 
