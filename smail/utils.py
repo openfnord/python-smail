@@ -2,26 +2,9 @@
 
 import subprocess
 
-from oscrypto import asymmetric
-
 UNIX_NEWLINE = '\n'
 WINDOWS_NEWLINE = '\r\n'
 MAC_NEWLINE = '\r'
-
-
-def convert_cert(cert):
-    """Converts an oscrypto certificate to an asn1crypto certificate
-
-    Args:
-        cert (:obj:`oscrypto.asymmetric.Certificate`): The certificate to convert
-
-    Returns:
-        :obj:`asn1crypto.x509.Certificate`:
-
-    """
-
-    if not isinstance(cert, asymmetric.Certificate):
-        raise AttributeError("only oscrypto.asymmetric.Certificate supported")
 
 
 def wrap_lines(long_string, wrap):
