@@ -6,11 +6,11 @@ from shutil import copyfile
 
 import pytest
 from asn1crypto import pem, keys, x509
-from oscrypto import asymmetric
 
-from smail import sign_message
 from smail import encrypt_message
 from smail import sign_and_encrypt_message
+from smail import sign_message
+from smail.message import make_msg
 from tests.conftest import FIXTURE_DIR
 from tests.fixtures import get_plain_text_message
 
@@ -161,8 +161,7 @@ class TestMessage:
 
         certs = []
         for pub_key in pub_keys:
-            cert = asymmetric.load_certificate(os.path.join(FIXTURE_DIR, pub_key))
-            certs.append(cert)
+            certs.append(os.path.join(FIXTURE_DIR, pub_key))
 
         assert isinstance(get_plain_text_message(), email.message.Message)
 
@@ -178,28 +177,25 @@ class TestMessage:
         msg = get_plain_text_message()
         msg.replace_header('Subject', '{} - {}'.format(msg['Subject'], output_file_eml))
 
-        with open(os.path.join(FIXTURE_DIR, 'AliceRSASignByCarl.pem'), 'rb') as cert_signer_file:
-            der_bytes = cert_signer_file.read()
-            if pem.detect(der_bytes):
-                type_name, headers, der_bytes = pem.unarmor(der_bytes)
+        key_signer_path = os.path.join(FIXTURE_DIR, 'AlicePrivRSASign.pem')
+        cert_signer_path = os.path.join(FIXTURE_DIR, 'AliceRSASignByCarl.pem')
 
-            cert_signer = x509.Certificate.load(der_bytes)
+        certs = [os.path.join(FIXTURE_DIR, 'BobRSASignByCarl.pem')]
 
-        with open(os.path.join(FIXTURE_DIR, 'AlicePrivRSASign.pem'), 'rb') as key_signer_file:
-            key_bytes = key_signer_file.read()
-            if pem.detect(key_bytes):
-                _, _, key_bytes = pem.unarmor(key_bytes)
-
-            key_signer_info = keys.PrivateKeyInfo.load(key_bytes)
-
-        pub_keys = ['BobRSASignByCarl.pem']
-
-        certs = []
-        for pub_key in pub_keys:
-            cert = asymmetric.load_certificate(os.path.join(FIXTURE_DIR, pub_key))
-            certs.append(cert)
-
-        signed_encrypted_message = sign_and_encrypt_message(msg, key_signer_info, cert_signer, certs)
+        signed_encrypted_message = sign_and_encrypt_message(msg, key_signer_path, cert_signer_path, certs)
 
         with open(file_path, 'wb') as f:
             f.write(signed_encrypted_message.as_bytes())
+
+    #  ToDo(frennkie) test inline images and attachments
+    @pytest.mark.parametrize("addr,name,reci,subject", [
+        ('alice@example.com', "Alice", "bob@example.com", "Test-Subject"),
+        ('alice@example.com', "Alice Anderson", "bob@example.com", "Test-Subject2")
+    ])
+    def test_make_message(self, addr, name, reci, subject):
+        msg = make_msg(sender_addr=addr, sender_name=name,
+                       recipients=reci, subject=subject,
+                       text="Text Body", html="This is a <strong>HTML</strong> body.",
+                       img_list=None, attachments=None)
+
+        assert isinstance(msg, Message)

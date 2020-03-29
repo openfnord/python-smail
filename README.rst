@@ -40,7 +40,7 @@ the e-mail in S/MIME format::
     message['To'] = "BobRSA@example.com"
     message['Subject'] = "Text Message - Encrypted"
 
-    cert = asymmetric.load_certificate(os.path.join('tests', 'testdata', 'BobRSASignByCarl.pem'))
+    cert = os.path.join('tests', 'testdata', 'BobRSASignByCarl.pem')
 
     encrypted_message = encrypt_message(message, [cert])
     print(encrypted_message.as_string())
@@ -74,10 +74,8 @@ The code below loads Alice's private and public key in PEM format and uses it to
 sign the e-mail in S/MIME format::
 
     import os
-    from asn1crypto import keys, pem, x509
     from email.mime.text import MIMEText
     from email.utils import formatdate
-    from oscrypto import asymmetric
     from smail import sign_message
 
     message = MIMEText("This a plain text body!")
@@ -86,21 +84,10 @@ sign the e-mail in S/MIME format::
     message['To'] = "BobRSA@example.com"
     message['Subject'] = "Text Message - Signed"
 
-    with open(os.path.join('tests', 'testdata', 'AliceRSASignByCarl.pem'), 'rb') as cert_signer_file:
-        der_bytes = cert_signer_file.read()
-        if pem.detect(der_bytes):
-            type_name, headers, der_bytes = pem.unarmor(der_bytes)
+    cert_signer = os.path.join('tests', 'testdata', 'AliceRSASignByCarl.pem')
+    key_signer = os.path.join('tests', 'testdata', 'AlicePrivRSASign.pem')
 
-        cert_signer = x509.Certificate.load(der_bytes)
-
-    with open(os.path.join('tests', 'testdata', 'AlicePrivRSASign.pem'), 'rb') as key_signer_file:
-        key_bytes = key_signer_file.read()
-        if pem.detect(key_bytes):
-            _, _, key_bytes = pem.unarmor(key_bytes)
-
-        key_signer_info = keys.PrivateKeyInfo.load(key_bytes)
-
-    signed_message = sign_message(message, key_signer_info, cert_signer)
+    signed_message = sign_message(message, key_signer, cert_signer)
     print(signed_message.as_string())
 
 Output::
@@ -159,7 +146,6 @@ it to sign and encrypt the e-mail (from Alice to Bob) in S/MIME format::
 
 
     import os
-    from asn1crypto import keys, pem, x509
     from email.mime.text import MIMEText
     from email.utils import formatdate
     from oscrypto import asymmetric
@@ -171,23 +157,12 @@ it to sign and encrypt the e-mail (from Alice to Bob) in S/MIME format::
     message['To'] = "BobRSA@example.com"
     message['Subject'] = "Text Message - Signed and Encrypted"
 
-    with open(os.path.join('tests', 'testdata', 'AliceRSASignByCarl.pem'), 'rb') as cert_signer_file:
-        der_bytes = cert_signer_file.read()
-        if pem.detect(der_bytes):
-            type_name, headers, der_bytes = pem.unarmor(der_bytes)
+    cert_signer = os.path.join('tests', 'testdata', 'AliceRSASignByCarl.pem')
+    key_signer = os.path.join('tests', 'testdata', 'AlicePrivRSASign.pem')
 
-        cert_signer = x509.Certificate.load(der_bytes)
+    cert = os.path.join('tests', 'testdata', 'BobRSASignByCarl.pem')
 
-    with open(os.path.join('tests', 'testdata', 'AlicePrivRSASign.pem'), 'rb') as key_signer_file:
-        key_bytes = key_signer_file.read()
-        if pem.detect(key_bytes):
-            _, _, key_bytes = pem.unarmor(key_bytes)
-
-        key_signer_info = keys.PrivateKeyInfo.load(key_bytes)
-
-    cert = asymmetric.load_certificate(os.path.join('tests', 'testdata', 'BobRSASignByCarl.pem'))
-
-    signed_encrypted_message = sign_and_encrypt_message(message, key_signer_info, cert_signer, [cert])
+    signed_encrypted_message = sign_and_encrypt_message(message, key_signer, cert_signer, [cert])
     print(signed_encrypted_message.as_string())
 
 Output::
