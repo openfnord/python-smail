@@ -32,23 +32,22 @@ SOFTWARE.
 import hashlib
 from datetime import datetime, timezone
 
-from asn1crypto import cms, algos, core, keys
-from asn1crypto.x509 import Certificate
+from asn1crypto import cms, algos, core, x509
 from oscrypto import asymmetric
 
 
-def sign_bytes(data_unsigned, key, cert,
+def sign_bytes(data_unsigned, key_signer, cert_signer,
                digest_alg="sha256", sig_alg='rsa', attrs=True, signed_value=None):
     """Takes bytes, creates a ContentInfo structure and returns it as signed bytes
 
     cert is mandatory for now (used to include the sender certificate in the
-    CMS "certificates" part
+    CMS "certificates" part)
 
     Args:
-        data_unsigned (bytes):
-        key (:obj:`asn1crypto.keys.PrivateKeyInfo`): Private key used to sign the
+        data_unsigned (bytes): data
+        key_signer (:obj:`oscrypto.asymmetric.PrivateKey`): Private key used to sign the
             message.
-        cert (:obj:`asn1crypto.x509.Certificate`): Certificate/Public Key
+        cert_signer (:obj:`asn1crypto.x509.Certificate`): Certificate/Public Key
             (belonging to Private Key) that will be included in the signed message.
         digest_alg (str): Digest (Hash) Algorithm - e.g. "sha256"
         sig_alg (str): Signature Algorithm
@@ -60,24 +59,23 @@ def sign_bytes(data_unsigned, key, cert,
          bytes: signed byte string
 
     Todo:
-        check "other cert signer" .. does this make sense?
+        check "other_cert_signers" .. does this make sense?
 
     """
     if not isinstance(data_unsigned, bytes):
         raise AttributeError("only bytes supported")
 
-    if not isinstance(key, keys.PrivateKeyInfo):
+    if not isinstance(key_signer, asymmetric.PrivateKey):
         raise AttributeError("only asn1crypto.keys.PrivateKeyInfo supported")
 
-    if not isinstance(cert, Certificate):
+    if not isinstance(cert_signer, x509.Certificate):
         raise AttributeError("only asn1crypto.x509.Certificate supported")
 
-    certificates = [cert]
+    certificates = [cert_signer]
 
-    # Todo(frennkie): check "other cert signer" .. does this make sense?
     other_cert_signers = []
     for i in range(len(other_cert_signers)):
-        if not isinstance(other_cert_signers[i], Certificate):
+        if not isinstance(other_cert_signers[i], x509.Certificate):
             raise AttributeError("only asn1crypto.x509.Certificate supported")
         certificates.append(other_cert_signers[i])
 
@@ -92,8 +90,8 @@ def sign_bytes(data_unsigned, key, cert,
         'version': 'v1',
         'sid': cms.SignerIdentifier({
             'issuer_and_serial_number': cms.IssuerAndSerialNumber({
-                'issuer': cert.issuer,
-                'serial_number': cert.serial_number,
+                'issuer': cert_signer.issuer,
+                'serial_number': cert_signer.serial_number,
             }),
         }),
         'digest_algorithm': algos.DigestAlgorithm({'algorithm': digest_alg}),
@@ -168,13 +166,11 @@ def sign_bytes(data_unsigned, key, cert,
     else:
         to_sign = data_unsigned
 
-    key = asymmetric.load_private_key(key)
-
     if sig_alg == "rsa":
-        signed_value_signature = asymmetric.rsa_pkcs1v15_sign(key, to_sign, digest_alg.lower())
+        signed_value_signature = asymmetric.rsa_pkcs1v15_sign(key_signer, to_sign, digest_alg.lower())
 
     elif sig_alg == "pss":
-        signed_value_signature = asymmetric.rsa_pss_sign(key, to_sign, pss_digest_alg)
+        signed_value_signature = asymmetric.rsa_pss_sign(key_signer, to_sign, pss_digest_alg)
 
     else:
         raise AttributeError("signature algorithm unsupported: {}".format(sig_alg))

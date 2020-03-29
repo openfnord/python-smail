@@ -77,15 +77,19 @@ def get_recipient_info_for_cert(cert, session_key, key_enc_alg="rsaes_pkcs1v15")
     )
 
 
-def encrypt_message(message, certs_recipients, content_enc_alg="aes256_cbc", key_enc_alg="rsaes_pkcs1v15", prefix=""):
+def encrypt_message(message, certs_recipients,
+                    content_enc_alg="aes256_cbc", key_enc_alg="rsaes_pkcs1v15", prefix=""):
     """Takes a message and returns a new message with the original content as encrypted body
 
-    Take the contents of the message parameter, formatted as in RFC 2822 (type bytes, str or message)
-    and encrypts them, so that they can only be read by the intended recipient specified by pubkey.
+    Take the contents of the message parameter, formatted as in RFC 2822 (type bytes, str or
+     message) and encrypts them, so that they can only be read by the intended recipient
+     specified by pubkey.
 
     Args:
         message (bytes, str or :obj:`email.message.Message`): Message to be encrypted.
-        certs_recipients (:obj:`list` of :obj:`oscrypto.asymmetric.Certificate`):
+        certs_recipients (:obj:`list` of `bytes`, `str` or :obj:`asn1crypto.x509.Certificate` or
+            :obj:`oscrypto.asymmetric.Certificate): A list of byte string of file contents, a
+            unicode string filename or an asn1crypto.x509.Certificate object
         key_enc_alg (str): Key Encryption Algorithm
         content_enc_alg (str): Content Encryption Algorithm
         prefix (str): Content type prefix (e.g. "x-"). Default to ""
@@ -97,6 +101,13 @@ def encrypt_message(message, certs_recipients, content_enc_alg="aes256_cbc", key
         TODO(frennkie) cert_recipients..?!
 
     """
+
+    certificates = []
+    for cert in certs_recipients:
+        if isinstance(cert, asymmetric.Certificate):
+            certificates.append(cert)
+        else:
+            certificates.append(asymmetric.load_certificate(cert))
 
     # Get the chosen block cipher
     if content_enc_alg == "tripledes_3key":
@@ -141,7 +152,7 @@ def encrypt_message(message, certs_recipients, content_enc_alg="aes256_cbc", key
     content = copied_msg.as_string()
     recipient_infos = []
 
-    for recipient_info in _iterate_recipient_infos(certs_recipients, block_cipher.session_key, key_enc_alg=key_enc_alg):
+    for recipient_info in _iterate_recipient_infos(certificates, block_cipher.session_key, key_enc_alg=key_enc_alg):
         if recipient_info is None:
             raise ValueError("Unknown public-key algorithm")
         recipient_infos.append(recipient_info)

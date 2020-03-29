@@ -5,12 +5,12 @@ from tempfile import mkstemp
 
 import pytest
 
-from .conftest import FIXTURE_DIR
 from smail.encrypt import encrypt_message
 from smail.utils import get_cmd_output, normalize_line_endings
+from .conftest import FIXTURE_DIR
 
 
-class EncryptTest:
+class TestEncrypt:
     @classmethod
     def setup_class(cls):
         """ setup any state specific to the execution of the given class (which
@@ -30,11 +30,8 @@ class EncryptTest:
             "Now you see me.",
         ]
 
-        with open(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem'), 'rb') as cert:
-            result = encrypt_message("\n".join(message), cert.read(), algorithm=algorithm)
-
-        # cert = asymmetric.load_certificate(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem'))
-        # result = encrypt_message("\n".join(message), [cert], algorithm=algorithm)
+        certs_recipients = [os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem')]
+        result = encrypt_message("\n".join(message), certs_recipients, content_enc_alg=algorithm)
 
         fd, tmp_file = mkstemp()
         os.write(fd, result.encode())
@@ -62,8 +59,8 @@ class EncryptTest:
             "Hey Bob, now you see me..!",
         ]
 
-        with open(os.path.join(FIXTURE_DIR, 'BobRSASignByCarl.pem'), 'rb') as cert:
-            result = encrypt_message("\n".join(message), cert.read(), algorithm=algorithm)
+        certs_recipients = [os.path.join(FIXTURE_DIR, 'BobRSASignByCarl.pem')]
+        result = encrypt_message("\n".join(message), certs_recipients, content_enc_alg=algorithm)
 
         fd, tmp_file = mkstemp()
         os.write(fd, result.encode())
@@ -83,10 +80,10 @@ class EncryptTest:
         assert "Hey Bob, now you see me..!" == payload[len(payload) - 1]
 
     @pytest.mark.skip
-    def test_message_to_bob_tripleDES_cbc(self, ):
+    def test_message_to_bob_tripledes_cbc(self, ):
         self.assert_message_to_bob("tripledes_3key")
 
-    def test_message_to_carl_tripleDES_cbc(self, ):
+    def test_message_to_carl_tripledes_cbc(self, ):
         self.assert_message_to_carl("tripledes_3key")
 
     def test_message_to_carl_aes128_cbc(self):
@@ -108,8 +105,9 @@ class EncryptTest:
             "\n"
             "Goodbye!",
         ]
-        with open(os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem'), 'rb') as cert:
-            result = encrypt_message("\n".join(message), cert.read())
+
+        certs_recipients = [os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem')]
+        result = encrypt_message("\n".join(message), certs_recipients)
 
         fd, tmp_file = mkstemp()
         os.write(fd, result.encode())

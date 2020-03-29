@@ -4,6 +4,9 @@ from copy import deepcopy
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 
+from asn1crypto import x509
+from oscrypto import asymmetric
+
 from smail.signer import sign_bytes
 
 
@@ -38,10 +41,14 @@ def sign_message(message, key_signer, cert_signer,
 
     Args:
         message (:obj:`email.message.Message`): The message object to sign and encrypt.
-        key_signer (:obj:`asn1crypto.keys.PrivateKeyInfo`): Private key used to sign the
-            message.
-        cert_signer (:obj:`asn1crypto.x509.Certificate`): Certificate/Public Key
-            (belonging to Private Key) that will be included in the signed message.
+        key_signer (`bytes`, `str` or :obj:`asn1crypto.keys.PrivateKeyInfo` or
+            :obj:`oscrypto.asymmetric.PrivateKey`): Private key used to sign the message. (A byte
+            string of file contents, a unicode string filename or an asn1crypto.keys.PrivateKeyInfo
+            object)
+        cert_signer (`bytes`, `str` or :obj:`asn1crypto.x509.Certificate` or
+            :obj:`oscrypto.asymmetric.Certificate`): Certificate/Public Key (belonging to Private
+            Key) that will be included in the signed message. (A byte string of file contents, a
+            unicode string filename or an asn1crypto.x509.Certificate object)
         digest_alg (str): Digest (Hash) Algorithm - e.g. "sha256"
         sig_alg (str): Signature Algorithm
         attrs (bool): Whether to include signed attributes (signing time). Default
@@ -53,6 +60,15 @@ def sign_message(message, key_signer, cert_signer,
          :obj:`email.message.Message`: signed message
 
     """
+
+    # private key
+    if not isinstance(key_signer, asymmetric.PrivateKey):
+        key_signer = asymmetric.load_private_key(key_signer)
+
+    # cert
+    if not isinstance(cert_signer, x509.Certificate):
+        cert_signer_oscrypto = asymmetric.load_certificate(cert_signer)
+        cert_signer = cert_signer_oscrypto.asn1
 
     if digest_alg == "md5":
         micalg = "md5"

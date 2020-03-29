@@ -6,12 +6,10 @@ from email import message_from_string
 from tempfile import mkstemp
 
 import pytest
-from asn1crypto import keys, pem
-from asn1crypto.x509 import Certificate
 
-from .conftest import FIXTURE_DIR
 from smail.sign import sign_message
 from smail.utils import get_cmd_output
+from .conftest import FIXTURE_DIR
 
 
 class TestSign:
@@ -52,21 +50,10 @@ class TestSign:
         assert isinstance(msg, email.message.Message)
 
         # load cert & key
-        with open(os.path.join(FIXTURE_DIR, 'AliceRSA2048.pem'), 'rb') as cert_signer_file:
-            der_bytes = cert_signer_file.read()
-            if pem.detect(der_bytes):
-                type_name, headers, der_bytes = pem.unarmor(der_bytes)
+        cert_signer = os.path.join(FIXTURE_DIR, 'AliceRSA2048.pem')
+        key_signer = os.path.join(FIXTURE_DIR, 'AlicePrivRSA2048.pem')
 
-            cert_signer = Certificate.load(der_bytes)
-
-        with open(os.path.join(FIXTURE_DIR, 'AlicePrivRSA2048.pem'), 'rb') as key_signer_file:
-            key_bytes = key_signer_file.read()
-            if pem.detect(key_bytes):
-                _, _, key_bytes = pem.unarmor(key_bytes)
-
-            key_signer_info = keys.PrivateKeyInfo.load(key_bytes)
-
-        msg_signed = sign_message(msg, key_signer_info, cert_signer,
+        msg_signed = sign_message(msg, key_signer, cert_signer,
                                   digest_alg=digest_alg, sig_alg=sig_alg,
                                   allow_deprecated=depre)
 
