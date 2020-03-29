@@ -50,7 +50,7 @@ def _iterate_recipient_infos(certs, session_key, key_enc_alg):
 
     Args:
         certs (:obj:`list` of :obj:`oscrypto.asymmetric.Certificate`): Certificate object
-        session_key (str): Session key
+        session_key (bytes): Session key
         key_enc_alg (str): Key Encryption Algorithm
 
     Yields:
@@ -67,7 +67,7 @@ def get_recipient_info_for_cert(cert, session_key, key_enc_alg="rsaes_pkcs1v15")
 
     Args:
         cert (:obj:`oscrypto.asymmetric.Certificate`): Certificate object
-        session_key (str): Session key
+        session_key (bytes): Session key
         key_enc_alg (str): Key Encryption Algorithm
 
     Returns:
