@@ -11,7 +11,7 @@ from .conftest import FIXTURE_DIR
 
 class TestCert:
     @pytest.mark.parametrize("file_name,serial,issuer,sig_algo", [
-        ("AliceRSA2048.pem", 84724501279626539432081479560025710686849292165, "CarlRSA2048", "rsassa_pkcs1v15"),
+        ("AliceRSA2048.pem", 17886239751307353133, "CarlRSA2048", "rsassa_pkcs1v15"),
         ("AliceECp256.pem", 70400699072669113604691775782881115307289436427, "CarlECp256", "ecdsa"),
         ("AlicePSS2048.pem", 643522079216047803454536659318317487253176610229, "CarlPSS2048", "rsassa_pss")
     ])
@@ -31,7 +31,7 @@ class TestCert:
         assert cert['signature_algorithm'].signature_algo == sig_algo
 
     @pytest.mark.parametrize("file_name,serial,issuer,sig_algo", [
-        ("AliceRSA2048.pem", 84724501279626539432081479560025710686849292165, "CarlRSA2048", "rsa"),
+        ("AliceRSA2048.pem", 17886239751307353133, "CarlRSA2048", "rsa"),
         ("AliceECp256.pem", 70400699072669113604691775782881115307289436427, "CarlECp256", "ec")
         # TODO(frennkie) does not work on Windows.. check Linux; maybe open issue with oscrypto
         # ("AlicePSS2048.pem", 643522079216047803454536659318317487253176610229, "CarlPSS2048", "rsa")
