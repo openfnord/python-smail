@@ -78,7 +78,7 @@ ${OPENSSL} genpkey -algorithm rsa -pkeyopt rsa_keygen_bits:2048 -pkeyopt rsa_key
 ${OPENSSL} req -new -key DianePrivRSA2048.pem -subj "/CN=DianeRSA2048" -sha256 -out DianeRSA2048.csr
 
 # Generate RSA EE based on the above CSR, and sign it with the above RSA CA
-${OPENSSL} x509 -extfile ee_bob.ext -req -CAcreateserial -days 14600 -in DianeRSA2048.csr -sha256 -CA CarlRSA2048Self.pem -CAkey CarlPrivRSA2048Self.pem -out DianeRSA2048.pem
+${OPENSSL} x509 -extfile ee_diane.ext -req -CAcreateserial -days 14600 -in DianeRSA2048.csr -sha256 -CA CarlRSA2048Self.pem -CAkey CarlPrivRSA2048Self.pem -out DianeRSA2048.pem
 
 # Clean up CSRs, Ext and SRL                                                                                                               │
 rm AliceRSA2048.csr ee_alice.ext BobRSA2048.csr ee_bob.ext CarlRSA2048Self.csr CarlRSA2048Self.srl ca.ext DianeRSA2048.csr ee_diane.ext
