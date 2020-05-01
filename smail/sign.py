@@ -106,7 +106,7 @@ def sign_message(message, key_signer, cert_signer,
             del copied_msg[hdr_name]
             headers[hdr_name] = values
 
-    data_unsigned = copied_msg.as_bytes()
+    data_unsigned = copied_msg.as_string().encode()
     data_unsigned = data_unsigned.replace(b'\n', b'\r\n')
     data_signed = sign_bytes(data_unsigned, key_signer, cert_signer, digest_alg, sig_alg, attrs=attrs)
     data_signed = base64.encodebytes(data_signed)
