@@ -10,6 +10,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - ...
 
+0.8.0 (2020-09-20)
+------------------
+
+- fix: issue #6 corrupted MIMEMultipart alternative signing
+
 0.7.0 (2020-03-29)
 ------------------
 
