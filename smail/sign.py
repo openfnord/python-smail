@@ -36,7 +36,8 @@ class UnsupportedSignatureError(Exception):
 
 def sign_message(message, key_signer, cert_signer,
                  digest_alg='sha256', sig_alg='rsa',
-                 attrs=True, prefix="", allow_deprecated=False):
+                 attrs=True, prefix="", allow_deprecated=False,
+                 multipart_class=MIMEMultipart):
     """Takes a message, signs it and returns a new signed message object.
 
     Args:
@@ -55,6 +56,7 @@ def sign_message(message, key_signer, cert_signer,
             to True
         prefix (str): Content type prefix (e.g. "x-"). Default to ""
         allow_deprecated (bool): Whether deprecated digest algorithms should  be allowed.
+        multipart_class (class): Which MIMEMultiPart class should be used.
 
     Returns:
          :obj:`email.message.Message`: signed message
@@ -111,8 +113,8 @@ def sign_message(message, key_signer, cert_signer,
     data_signed = sign_bytes(data_unsigned, key_signer, cert_signer, digest_alg, sig_alg, attrs=attrs)
     data_signed = base64.encodebytes(data_signed)
 
-    new_msg = MIMEMultipart("signed",
-                            protocol="application/{}pkcs7-signature".format(prefix), micalg=micalg)
+    new_msg = multipart_class("signed",
+                              protocol="application/{}pkcs7-signature".format(prefix), micalg=micalg)
     # add original headers
     for hrd, values in headers.items():
         for val in values:
