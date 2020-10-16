@@ -78,7 +78,7 @@ def get_recipient_info_for_cert(cert, session_key, key_enc_alg="rsaes_pkcs1v15")
 
     # TODO: use subject_key_identifier when available
 
-    # ToDo(frennkie) find a better way to copy and build the value for "issue"
+    # ToDo(frennkie) find a better way to copy and build the value for "issuer"
 
     ordered_dict = cert.asn1['tbs_certificate']['issuer'].native
     issuer = x509.Name.build(name_dict={**ordered_dict}, use_printable=True)
