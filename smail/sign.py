@@ -41,7 +41,7 @@ def sign_message(message, key_signer, cert_signer,
     """Takes a message, signs it and returns a new signed message object.
 
     Args:
-        message (:obj:`email.message.Message`): The message object to sign and encrypt.
+        message (:obj:`email.message.Message`): The message object to sign.
         key_signer (`bytes`, `str` or :obj:`asn1crypto.keys.PrivateKeyInfo` or
             :obj:`oscrypto.asymmetric.PrivateKey`): Private key used to sign the message. (A byte
             string of file contents, a unicode string filename or an asn1crypto.keys.PrivateKeyInfo
