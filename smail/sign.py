@@ -116,9 +116,9 @@ def sign_message(message, key_signer, cert_signer,
     new_msg = multipart_class("signed",
                               protocol="application/{}pkcs7-signature".format(prefix), micalg=micalg)
     # add original headers
-    for hrd, values in headers.items():
+    for hdr, values in headers.items():
         for val in values:
-            new_msg.add_header(hrd, str(val))
+            new_msg.add_header(hdr, str(val))
     new_msg.preamble = "This is an S/MIME signed message"
 
     # attach original message

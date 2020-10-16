@@ -216,9 +216,9 @@ def encrypt_message(message, certs_recipients,
         result_msg[name] = value
 
     # add original headers
-    for hrd, values in headers.items():
+    for hdr, values in headers.items():
         for val in values:
-            result_msg.add_header(hrd, str(val))
+            result_msg.add_header(hdr, str(val))
 
     # return the same type as was passed in
     if passed_as_bytes:
