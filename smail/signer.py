@@ -37,11 +37,14 @@ from oscrypto import asymmetric
 
 
 def sign_bytes(data_unsigned, key_signer, cert_signer,
-               digest_alg="sha256", sig_alg='rsa', attrs=True, signed_value=None):
+               digest_alg="sha256", sig_alg='rsa', attrs=True,
+               include_cert_signer=True, additional_certs=None,
+               signed_value=None, ):
     """Takes bytes, creates a ContentInfo structure and returns it as signed bytes
 
-    cert is mandatory for now (used to include the sender certificate in the
-    CMS "certificates" part)
+    Notes:
+        cert_signer is mandatory (needed to get Issuer and Serial Number ) but can be
+            excluded from signed data.
 
     Args:
         data_unsigned (bytes): data
@@ -53,15 +56,18 @@ def sign_bytes(data_unsigned, key_signer, cert_signer,
         sig_alg (str): Signature Algorithm
         attrs (bool): Whether to include signed attributes (signing time). Default
             to True
+        include_cert_signer (bool): Whether to include the public certificate of the signer
+            in the signed data. Default to True
+        additional_certs (:obj:`list` of :obj:`asn1crypto.x509.Certificate`): List of
+            additional certificates to be included (e.g. Intermediate or Root CA certs).
         signed_value: unknown
 
-    Returns:
-         bytes: signed byte string
 
-    Todo:
-        check "other_cert_signers" .. does this make sense?
+    Returns:
+         bytes: signed bytes
 
     """
+
     if not isinstance(data_unsigned, bytes):
         raise AttributeError("only bytes supported")
 
@@ -71,13 +77,16 @@ def sign_bytes(data_unsigned, key_signer, cert_signer,
     if not isinstance(cert_signer, x509.Certificate):
         raise AttributeError("only asn1crypto.x509.Certificate supported")
 
-    certificates = [cert_signer]
+    if include_cert_signer:
+        certificates = [cert_signer]
+    else:
+        certificates = []
 
-    other_cert_signers = []
-    for i in range(len(other_cert_signers)):
-        if not isinstance(other_cert_signers[i], x509.Certificate):
-            raise AttributeError("only asn1crypto.x509.Certificate supported")
-        certificates.append(other_cert_signers[i])
+    if additional_certs:
+        for additional in additional_certs:
+            if not isinstance(additional, x509.Certificate):
+                raise AttributeError("only asn1crypto.x509.Certificate supported")
+            certificates.append(additional)
 
     if digest_alg not in ["md5", "sha1", "sha256", "sha512"]:
         raise AttributeError("digest algorithm unsupported: {}".format(digest_alg))
@@ -151,7 +160,6 @@ def sign_bytes(data_unsigned, key_signer, cert_signer,
             'content_type': 'data',
         },
         'certificates': certificates,
-        # 'crls': [],
         'signer_infos': [
             signer,
         ],

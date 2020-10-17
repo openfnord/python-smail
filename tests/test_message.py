@@ -79,6 +79,10 @@ class TestMessage:
                                   'plain_message_signed_by_alice_sha1.eml',
                                   'plain_message_signed_by_alice_sha1_pss.eml',
                                   'plain_message_signed_by_alice_sha256.eml',
+                                  'plain_message_signed_by_alice_sha256_incl_false_false.eml',
+                                  'plain_message_signed_by_alice_sha256_incl_false_true.eml',
+                                  'plain_message_signed_by_alice_sha256_incl_true_false.eml',
+                                  'plain_message_signed_by_alice_sha256_incl_true_true.eml',
                                   'plain_message_signed_by_alice_sha256_pss.eml'}
 
         # (re-)check that everything is a "Message"
@@ -140,6 +144,62 @@ class TestMessage:
         signed_message = sign_message(msg, key_signer_info, cert_signer,
                                       digest_alg=digest_alg, sig_alg=sig_alg,
                                       allow_deprecated=depr)
+
+        assert isinstance(signed_message, email.message.Message)
+
+        with open(file_path, 'wb') as f:
+            f.write(signed_message.as_bytes())
+
+    @pytest.mark.parametrize("output_file_eml,pub_key,private_key,incl_self,incl_ca", [
+        ("plain_message_signed_by_alice_sha256_incl_false_false.eml",
+         "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", False, False),
+        ("plain_message_signed_by_alice_sha256_incl_true_false.eml",
+         "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", True, False),
+        ("plain_message_signed_by_alice_sha256_incl_false_true.eml",
+         "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", False, True),
+        ("plain_message_signed_by_alice_sha256_incl_true_true.eml",
+         "AliceRSASignByCarl.pem", "AlicePrivRSASign.pem", True, True),
+    ])
+    def test_plain_message_signed_by_alice_includes(self, output_file_eml, pub_key, private_key, incl_self, incl_ca):
+        file_path = os.path.join(self.test_dir, output_file_eml)
+
+        msg = get_plain_text_message()
+        msg.replace_header('Subject', '{} - {}'.format(msg['Subject'], output_file_eml))
+
+        with open(os.path.join(FIXTURE_DIR, pub_key), 'rb') as cert_signer_file:
+            der_bytes = cert_signer_file.read()
+            if pem.detect(der_bytes):
+                type_name, headers, der_bytes = pem.unarmor(der_bytes)
+
+            cert_signer = x509.Certificate.load(der_bytes)
+
+        with open(os.path.join(FIXTURE_DIR, private_key), 'rb') as key_signer_file:
+            key_bytes = key_signer_file.read()
+            if pem.detect(key_bytes):
+                _, _, key_bytes = pem.unarmor(key_bytes)
+
+            key_signer = keys.RSAPrivateKey.load(key_bytes)
+            key_signer_info = keys.PrivateKeyInfo.load(key_bytes)
+
+        assert isinstance(key_signer_info, keys.PrivateKeyInfo)
+        assert isinstance(key_signer, keys.RSAPrivateKey)
+
+        if incl_ca:
+            with open(os.path.join(FIXTURE_DIR, 'CarlRSA2048Self.pem'), 'rb') as ca_file:
+                der_bytes = ca_file.read()
+                if pem.detect(der_bytes):
+                    type_name, headers, der_bytes = pem.unarmor(der_bytes)
+
+                ca = x509.Certificate.load(der_bytes)
+
+            signed_message = sign_message(msg, key_signer_info, cert_signer,
+                                          digest_alg="sha256", sig_alg="rsa",
+                                          include_cert_signer=incl_self,
+                                          additional_certs=[ca])
+        else:
+            signed_message = sign_message(msg, key_signer_info, cert_signer,
+                                          digest_alg="sha256", sig_alg="rsa",
+                                          include_cert_signer=incl_self)
 
         assert isinstance(signed_message, email.message.Message)
 

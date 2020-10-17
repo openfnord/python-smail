@@ -37,6 +37,8 @@ class UnsupportedSignatureError(Exception):
 def sign_message(message, key_signer, cert_signer,
                  digest_alg='sha256', sig_alg='rsa',
                  attrs=True, prefix="", allow_deprecated=False,
+                 include_cert_signer=True,
+                 additional_certs=None,
                  multipart_class=MIMEMultipart):
     """Takes a message, signs it and returns a new signed message object.
 
@@ -55,7 +57,11 @@ def sign_message(message, key_signer, cert_signer,
         attrs (bool): Whether to include signed attributes (signing time). Default
             to True
         prefix (str): Content type prefix (e.g. "x-"). Default to ""
-        allow_deprecated (bool): Whether deprecated digest algorithms should  be allowed.
+        allow_deprecated (bool): Whether deprecated digest algorithms should be allowed.
+        include_cert_signer (bool): Whether to include the public certificate of the signer
+            in the signed data. Default to True
+        additional_certs (:obj:`list` of :obj:`asn1crypto.x509.Certificate`): List of
+            additional certificates to be included (e.g. Intermediate or Root CA certs).
         multipart_class (class): Which MIMEMultiPart class should be used.
 
     Returns:
@@ -94,6 +100,15 @@ def sign_message(message, key_signer, cert_signer,
     else:
         raise UnsupportedSignatureError("{} is unknown or unsupported".format(sig_alg))
 
+    additional_x509 = []
+    if additional_certs:
+        for additional in additional_certs:
+            if not isinstance(additional, x509.Certificate):
+                additional_oscrypto = asymmetric.load_certificate(additional)
+                additional = additional_oscrypto.asn1
+
+            additional_x509.append(additional)
+
     # make a deep copy of original message to avoid any side effects (original will not be touched)
     copied_msg = deepcopy(message)
 
@@ -110,7 +125,8 @@ def sign_message(message, key_signer, cert_signer,
 
     data_unsigned = copied_msg.as_string().encode()
     data_unsigned = data_unsigned.replace(b'\n', b'\r\n')
-    data_signed = sign_bytes(data_unsigned, key_signer, cert_signer, digest_alg, sig_alg, attrs=attrs)
+    data_signed = sign_bytes(data_unsigned, key_signer, cert_signer, digest_alg, sig_alg, attrs=attrs,
+                             include_cert_signer=include_cert_signer, additional_certs=additional_x509)
     data_signed = base64.encodebytes(data_signed)
 
     new_msg = multipart_class("signed",
