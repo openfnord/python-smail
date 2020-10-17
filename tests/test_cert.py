@@ -99,8 +99,9 @@ class TestCert:
         session_key = os.urandom(16)
         ri = get_recipient_info_for_cert(cert, session_key)
 
-        assert isinstance(ri.chosen['rid'].chosen, cms.IssuerAndSerialNumber)
-        assert isinstance(ri.chosen['rid'].chosen['issuer'].contents, bytes)
+        assert isinstance(ri, cms.KeyTransRecipientInfo)
+        assert isinstance(ri['rid'].chosen, cms.IssuerAndSerialNumber)
+        assert isinstance(ri['rid'].chosen['issuer'].contents, bytes)
 
         assert cert.asn1['tbs_certificate']['issuer'].native[key] == value
         # assert cert.asn1['tbs_certificate']['issuer'].native == b"foo"

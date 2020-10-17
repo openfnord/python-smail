@@ -4,8 +4,10 @@ from copy import deepcopy
 from email import message_from_string, message_from_bytes
 from email.mime.text import MIMEText
 
-from asn1crypto import cms, x509
+from asn1crypto import cms
+from asn1crypto.x509 import Certificate as AsnCryptoCertificate
 from oscrypto import asymmetric
+from oscrypto.asymmetric import dump_certificate
 
 from .ciphers import TripleDes, AesCbc
 
@@ -76,34 +78,26 @@ def get_recipient_info_for_cert(cert, session_key, key_enc_alg="rsaes_pkcs1v15")
 
     # TODO: use subject_key_identifier when available
 
-    # ToDo(frennkie) find a better way to copy and build the value for "issuer"
+    # load asymmetric.Certificate as asn1crypto.x509.Certificate in order
+    # to get issuer and serial in correct format for CMS Recipient Info object
+    asn1_cert = AsnCryptoCertificate.load(dump_certificate(cert, encoding='der'))
 
-    ordered_dict = cert.asn1['tbs_certificate']['issuer'].native
-    issuer = x509.Name.build(name_dict={**ordered_dict}, use_printable=True)
-
-    serial = cert.asn1['tbs_certificate']['serial_number'].native
-
+    # asymmetrically encrypt session key for recipient (identified by issuer + serial)
     key_enc_func = _get_key_encryption_algorithm(key_enc_alg)
     encrypted_key = key_enc_func(cert.public_key, session_key)
 
-    return cms.RecipientInfo(
-        name="ktri",
-        value={
-            "version": "v0",
-            "rid": cms.RecipientIdentifier(
-                name="issuer_and_serial_number",
-                value={
-                    "issuer": issuer,
-                    "serial_number": serial,
-                },
-            ),
-            "key_encryption_algorithm": {
-                "algorithm": key_enc_alg,
-                "parameters": None,
-            },
-            "encrypted_key": encrypted_key,
+    return cms.KeyTransRecipientInfo({
+        "version": "v0",
+        "rid": cms.IssuerAndSerialNumber({
+            "issuer": asn1_cert.issuer,
+            "serial_number": asn1_cert.serial_number,
+        }),
+        "key_encryption_algorithm": {
+            "algorithm": key_enc_alg,
+            "parameters": None,
         },
-    )
+        "encrypted_key": encrypted_key,
+    })
 
 
 def encrypt_message(message, certs_recipients,
