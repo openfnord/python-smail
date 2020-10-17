@@ -81,7 +81,7 @@ class TestSign:
         ("sha256", "rsa", False, False, True),
         ("sha256", "rsa", False, True, True),
     ])
-    def test_message_from_alice(self, digest_alg, sig_alg, depre, include_cert, include_ca):
+    def test_message_from_alice_includes(self, digest_alg, sig_alg, depre, include_cert, include_ca):
         msg = email.message_from_string("\n".join(self.message))
         assert isinstance(msg, email.message.Message)
 
