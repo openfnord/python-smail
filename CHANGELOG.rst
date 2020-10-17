@@ -8,7 +8,17 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 0.x.0 (unreleased)
 ------------------
 
-- ...
+-
+
+0.9.0 (2020-10-17)
+------------------
+
+- add: include_cert_signer (bool) to sign_message() which indicates whether the signing
+  certificate should be included
+- add: additional_certs (list) to sign_message() which allows for additional certificates
+  (e.g. Intermediate CAs) to be added
+- change: simplify MIME encoding (replace custom function "wrap_lines")
+- remove: smail.utils.wrap_lines
 
 0.8.0 (2020-09-20)
 ------------------
