@@ -1,6 +1,5 @@
 # _*_ coding: utf-8 _*_
-
-from base64 import b64encode
+import base64
 from copy import deepcopy
 from email import message_from_string, message_from_bytes
 from email.mime.text import MIMEText
@@ -9,7 +8,6 @@ from asn1crypto import cms, x509
 from oscrypto import asymmetric
 
 from .ciphers import TripleDes, AesCbc
-from .utils import wrap_lines
 
 
 class UnsupportedAlgorithmError(Exception):
@@ -191,7 +189,7 @@ def encrypt_message(message, certs_recipients,
             },
         }
     )
-    encoded_content = "\n".join(wrap_lines(b64encode(enveloped_data.dump()), 64))
+    encoded_content = base64.encodebytes(enveloped_data.dump()).decode()
 
     # Create the resulting message
     result_msg = MIMEText(encoded_content)

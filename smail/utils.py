@@ -7,42 +7,6 @@ WINDOWS_NEWLINE = '\r\n'
 MAC_NEWLINE = '\r'
 
 
-def wrap_lines(long_string, wrap):
-    """Takes a string and returns a list of wrapped lines.
-
-    Split the long string into line chunks according to the wrap limit and
-    existing newlines.
-
-    Args:
-        long_string(str): a long, possibly multiline string
-        wrap (int): maximum number of characters per line. 0 or negative wrap means no limit.
-
-    Returns:
-        :obj:`list` of :obj:`str`: list of lines of at most `wrap` characters each.
-
-    """
-
-    if not long_string:
-        return []
-
-    if isinstance(long_string, bytes):
-        long_string = long_string.decode()
-
-    long_lines = long_string.split("\n")
-    if wrap <= 0:
-        return long_lines
-
-    ret = []
-    for line in long_lines:
-        if not line:
-            # Empty line
-            ret += [line]
-        else:
-            ret += [line[i: i + wrap] for i in range(0, len(line), wrap)]
-
-    return ret
-
-
 def normalize_line_endings(lines, line_ending='unix'):
     """Normalizes line endings to unix (\n), windows (\r\n) or mac (\r).
 
