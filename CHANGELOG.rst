@@ -8,7 +8,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 0.x.0 (unreleased)
 ------------------
 
--
+- add: test cases using attachments
 
 0.9.0 (2020-10-17)
 ------------------

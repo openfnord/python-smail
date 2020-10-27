@@ -12,7 +12,7 @@ from smail import sign_and_encrypt_message
 from smail import sign_message
 from smail.message import make_msg
 from tests.conftest import FIXTURE_DIR
-from tests.fixtures import get_plain_text_message
+from tests.fixtures import get_plain_text_message, get_message
 
 
 class TestMessage:
@@ -69,6 +69,8 @@ class TestMessage:
         file_list = [f for f in os.listdir(cls.test_dir)]
         assert set(file_list) == {'BobRSASignByCarl_password.p12',
                                   'BobRSASignByCarl_password.txt',
+                                  'msg_w1_att_message_encrypted_for_bob_aes256_cbc.eml',
+                                  'msg_w2_att_message_encrypted_for_bob_aes256_cbc.eml',
                                   'plain_message.eml',
                                   'plain_message_encrypted_for_alice_and_bob_aes256_cbc.eml',
                                   'plain_message_encrypted_for_bob_aes128_cbc.eml',
@@ -217,6 +219,31 @@ class TestMessage:
         file_path = os.path.join(self.test_dir, output_file_eml)
 
         msg = get_plain_text_message()
+        msg.replace_header('Subject', '{} - {}'.format(msg['Subject'], output_file_eml))
+
+        certs = []
+        for pub_key in pub_keys:
+            certs.append(os.path.join(FIXTURE_DIR, pub_key))
+
+        assert isinstance(get_plain_text_message(), email.message.Message)
+
+        encrypted_message = encrypt_message(msg, certs_recipients=certs)
+
+        with open(file_path, 'wb') as f:
+            f.write(encrypted_message.as_bytes())
+
+    @pytest.mark.parametrize("attachments,output_file_eml,pub_keys", [
+        (["sample1.pdf"], "msg_w1_att_message_encrypted_for_bob_aes256_cbc.eml",
+         ["BobRSASignByCarl.pem"]),
+        (["sample2.png", "sample3.txt"], "msg_w2_att_message_encrypted_for_bob_aes256_cbc.eml",
+         ["BobRSASignByCarl.pem"])
+    ])
+    def test_message_with_attachment_encrypted(self, attachments, output_file_eml, pub_keys):
+        file_path = os.path.join(self.test_dir, output_file_eml)
+
+        atts = [os.path.join(FIXTURE_DIR, x) for x in attachments]
+
+        msg = get_message(files=atts)
         msg.replace_header('Subject', '{} - {}'.format(msg['Subject'], output_file_eml))
 
         certs = []
