@@ -1,7 +1,5 @@
 # _*_ coding: utf-8 _*_
 import base64
-from copy import deepcopy
-from email import message_from_string, message_from_bytes
 from email.mime.text import MIMEText
 
 from asn1crypto import cms
@@ -9,40 +7,25 @@ from asn1crypto.x509 import Certificate as AsnCryptoCertificate
 from oscrypto import asymmetric
 from oscrypto.asymmetric import dump_certificate
 
-from .ciphers import TripleDes, AesCbc
+from .ciphers import encrypt_content, decrypt_content, encrypt_key, decrypt_key
+from .message import encode_message, decode_message
 
 
-class UnsupportedAlgorithmError(Exception):
+class InvalidMessageFormat(Exception):
     """
-    An exception indicating that an unsupported cipher algorithm was specified
+    An exception indicating that the passed message is not a valid encrypted message
     """
 
     pass
 
 
-def _get_content_encryption_algorithm(alg):
-    algs = {
-        "tripledes_3key": TripleDes(alg, key_size=24),
-        "aes128_cbc": AesCbc(alg, key_size=16),
-        "aes256_cbc": AesCbc(alg, key_size=32)
-    }
-    try:
-        return algs[alg]
-    except KeyError:
-        raise UnsupportedAlgorithmError("selected algorithm \"{}\" not in: "
-                                        "{}".format(alg, ", ".join(algs.keys())))
+class RecipientNotFound(Exception):
+    """
+    An exception indicating that the recipient indicated in the cert/key was not found
+    in the encrypted email as an intended recipient
+    """
 
-
-def _get_key_encryption_algorithm(alg):
-    algs = {
-        "rsaes_pkcs1v15": asymmetric.rsa_pkcs1v15_encrypt,
-        "rsa": asymmetric.rsa_pkcs1v15_encrypt  # rsa is mapped to rsaes_pkcs1v15 in asn1crypto
-    }
-    try:
-        return algs[alg]
-    except KeyError:
-        raise UnsupportedAlgorithmError("selected algorithm \"{}\" not in: "
-                                        "{}".format(alg, ", ".join(algs.keys())))
+    pass
 
 
 def _iterate_recipient_infos(certs, session_key, key_enc_alg):
@@ -83,8 +66,7 @@ def get_recipient_info_for_cert(cert, session_key, key_enc_alg="rsaes_pkcs1v15")
     asn1_cert = AsnCryptoCertificate.load(dump_certificate(cert, encoding='der'))
 
     # asymmetrically encrypt session key for recipient (identified by issuer + serial)
-    key_enc_func = _get_key_encryption_algorithm(key_enc_alg)
-    encrypted_key = key_enc_func(cert.public_key, session_key)
+    encrypted_key = encrypt_key(key_enc_alg, cert.public_key, session_key)
 
     return cms.KeyTransRecipientInfo({
         "version": "v0",
@@ -132,28 +114,13 @@ def encrypt_message(message, certs_recipients,
         else:
             certificates.append(asymmetric.load_certificate(cert))
 
-    # Check/Get the chosen algorithms for content and key encryption
-    block_cipher = _get_content_encryption_algorithm(content_enc_alg)
-    _ = _get_key_encryption_algorithm(key_enc_alg)
-
-    # Get the message content. This could be a string, bytes or a message object
-    passed_as_str = isinstance(message, str)
-
-    if passed_as_str:
-        message = message_from_string(message)
-
-    passed_as_bytes = isinstance(message, bytes)
-    if passed_as_bytes:
-        message = message_from_bytes(message)
-
-    # Extract the message payload without conversion, & the outermost MIME header / Content headers. This allows
-    # the MIME content to be rendered for any outermost MIME type incl. multipart
-    copied_msg = deepcopy(message)
+    # Convert any input to message object
+    copied_msg, orig_type = decode_message(message)
 
     headers = {}
     # besides some special ones (e.g. Content-Type) remove all headers before encrypting the body content
     for hdr_name in copied_msg.keys():
-        if hdr_name in ["Content-Type", "MIME-Version", "Content-Transfer-Encoding"]:
+        if hdr_name.lower() in ["content-type", "mime-version", "content-transfer-encoding"]:
             continue
 
         values = copied_msg.get_all(hdr_name)
@@ -164,13 +131,23 @@ def encrypt_message(message, certs_recipients,
     content = copied_msg.as_string()
     recipient_infos = []
 
-    for recipient_info in _iterate_recipient_infos(certificates, block_cipher.session_key, key_enc_alg=key_enc_alg):
+    # Encode the content
+    session_key, iv, ciphertext = encrypt_content(content_enc_alg, content)
+
+    # Wrap content in EncryptedContentInfo
+    encrypted_content_info = {
+        "content_type": "data",
+        "content_encryption_algorithm": {
+            "algorithm": content_enc_alg,
+            "parameters": iv,
+        },
+        "encrypted_content": ciphertext,
+    }
+
+    for recipient_info in _iterate_recipient_infos(certificates, session_key, key_enc_alg=key_enc_alg):
         if recipient_info is None:
             raise ValueError("Unknown public-key algorithm")
         recipient_infos.append(recipient_info)
-
-    # Encode the content
-    encrypted_content_info = block_cipher.encrypt(content)
 
     # Build the enveloped data and encode in base64
     enveloped_data = cms.ContentInfo(
@@ -213,9 +190,91 @@ def encrypt_message(message, certs_recipients,
             result_msg.add_header(hdr, str(val))
 
     # return the same type as was passed in
-    if passed_as_bytes:
-        return result_msg.as_bytes()
-    elif passed_as_str:
-        return result_msg.as_string()
-    else:
-        return result_msg
+    return encode_message(result_msg, orig_type)
+
+
+def decrypt_message(message, cert_recipient, key_recipient, key_password=None, prefix=""):
+    """Takes an encrypted message and returns a new message with the decrypted content as its body
+
+    Take the contents of the message parameter, formatted as in RFC 2822 (type bytes, str or
+        message) and decrypts them, using the private key in key_recipient.
+
+    Args:
+        message (`bytes`, `str` or :obj:`email.message.Message`): Message to be decrypted.
+        cert_recipient (:obj:`list` of `bytes`, `str` or :obj:`asn1crypto.x509.Certificate`):
+            A byte string of file contents, a unicode string filename or an
+            asn1crypto.x509.Certificate object
+        key_recipient (:obj:`list` of `bytes`, `str` or :obj:`asn1crypto.keys.PrivateKeyInfo`):
+            A byte string of file contents, a unicode string filename or an
+            asn1crypto.keys.PrivateKeyInfo object
+        key_password: (`str`): The password for the private key (optional)
+        prefix (`str`): Content type prefix (e.g. "x-"). Default to ""
+
+    Returns:
+        :obj:`message`: The new decrypted message (type str or message, as per input).
+    """
+
+    # Convert any input to message object
+    copied_msg, orig_type = decode_message(message)
+
+    encrypted_content = None
+    for part in copied_msg.walk():
+        if part.get_content_type() == 'application/{}pkcs7-mime'.format(prefix):
+            encrypted_content = part.get_payload(decode=True)
+            break
+
+    if encrypted_content is None:
+        raise InvalidMessageFormat()
+
+    # Load certificate and PK
+    recipient_cert = asymmetric.load_certificate(cert_recipient)
+    recipient_key = asymmetric.load_private_key(key_recipient, key_password)
+
+    # Convert to ASN cert and extract identifying info
+    asn1_cert = AsnCryptoCertificate.load(dump_certificate(recipient_cert, encoding='der'))
+    issuer = asn1_cert.issuer
+    serial_number = asn1_cert.serial_number
+
+    # Find the recipient in the infos by looking for the same rid as in the certificate
+    encrypted_key = None
+    key_encryption_alg = None
+    content_info = cms.ContentInfo.load(encrypted_content)
+    for recipient_info in content_info['content']['recipient_infos']:
+        key_trans_recipient_info = recipient_info.chosen
+        rid = key_trans_recipient_info['rid'].chosen
+
+        # For some reason the serial_number extracted above is an int, while issuer is an object
+        # To compare, we need to use the native serial number from the recipient_info
+        if rid['issuer'] == issuer and rid['serial_number'].native == serial_number:
+            key_encryption_alg = key_trans_recipient_info['key_encryption_algorithm']['algorithm'].native
+            encrypted_key = key_trans_recipient_info['encrypted_key'].native
+            break
+
+    if encrypted_key is None:
+        # This email cannot be decrypted by this key
+        raise RecipientNotFound()
+
+    # Decrypt key
+    session_key = decrypt_key(key_encryption_alg, recipient_key, encrypted_key)
+
+    # Get decryption algorithm and params
+    encrypted_content_info = content_info['content']['encrypted_content_info']
+    algorithm_info = encrypted_content_info['content_encryption_algorithm']
+    content_encryption_alg = algorithm_info['algorithm'].native
+    iv = algorithm_info['parameters']['iv'].native
+
+    # Decrypt content
+    ciphertext = encrypted_content_info['encrypted_content'].native
+    decrypted_content = decrypt_content(content_encryption_alg, session_key, iv, ciphertext)
+    decrypted_message, _ = decode_message(decrypted_content)
+
+    # Add back headers from the original message, but skip some that are set by encryption
+    for hdr_name in copied_msg.keys():
+        if hdr_name.lower() in ["content-type", "mime-version", "content-transfer-encoding"]:
+            continue
+
+        for val in copied_msg.get_all(hdr_name):
+            decrypted_message.add_header(hdr_name, str(val))
+
+    # return the same type as was passed in
+    return encode_message(decrypted_message, orig_type)

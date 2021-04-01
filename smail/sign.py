@@ -1,13 +1,15 @@
 # _*_ coding: utf-8 _*_
 import base64
+import hashlib
 from copy import deepcopy
+from email import message_from_bytes
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 
-from asn1crypto import x509
+from asn1crypto import x509, cms
 from oscrypto import asymmetric
 
-from smail.signer import sign_bytes
+from smail.signer import sign_bytes, verify_bytes, InvalidSignedMessageError
 
 
 class UnsupportedDigestError(Exception):
@@ -150,3 +152,53 @@ def sign_message(message, key_signer, cert_signer,
     new_msg.attach(msg_signature)
 
     return new_msg
+
+
+def verify_message(message, cert_signer, prefix=""):
+    """blah
+
+    """
+
+    # Find the signature
+    signature_data = None
+    original_message = None
+    for part in message.walk():
+        if part.get_content_type() == 'multipart/signed':
+            # This part should consist of 2 messages; the original and the signature
+            parts = part.get_payload()
+            part_count = len(parts)
+            if part_count != 2:
+                raise InvalidSignedMessageError('Too many parts: {} expected 2'.format(part_count))
+
+            for sub_part in parts:
+                if sub_part.get_content_type() == 'application/{}pkcs7-signature'.format(prefix):
+                    signature_data = cms.ContentInfo.load(sub_part.get_payload(decode=True))
+                else:
+                    original_message = sub_part.as_bytes().replace(b'\n', b'\r\n')
+
+    if signature_data is None:
+        raise InvalidSignedMessageError('No signature found in message')
+
+    signature_type = signature_data['content_type'].native
+    if signature_type != 'signed_data':
+        raise InvalidSignedMessageError('Signature type is "{}" instead of "signed_data"'.format(signature_type))
+
+    signature_data = signature_data['content']
+
+    # Load the signer certificate and get issuer and serial for comparison
+    signer_cert = asymmetric.load_certificate(cert_signer)
+    data = verify_bytes(original_message, signature_data, signer_cert)
+
+    # The message is verified, attach encapsulated headers
+    verified_message = message_from_bytes(data)
+
+    # Add back headers from the original message, but skip some that are set by encryption
+    for hdr_name in message.keys():
+        if hdr_name.lower() in ["content-type", "content-transfer-encoding",
+                                "content-disposition", "content-description"]:
+            continue
+
+        for val in message.get_all(hdr_name):
+            verified_message.add_header(hdr_name, str(val))
+
+    return verified_message

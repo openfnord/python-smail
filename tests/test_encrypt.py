@@ -1,6 +1,7 @@
 # _*_ coding: utf-8 _*_
 import os
 from email import message_from_string
+from email.policy import default
 from tempfile import mkstemp
 
 from smail.encrypt import encrypt_message
@@ -43,7 +44,7 @@ class TestEncrypt:
         # self.assertEqual(" ".join(cmd), "foo")
 
         cmd_output = get_cmd_output(cmd)
-        private_message = message_from_string(cmd_output)
+        private_message = message_from_string(cmd_output, policy=default)
         payload = private_message.get_payload().splitlines()
 
         assert "Now you see me." == payload[len(payload) - 1]
@@ -72,7 +73,7 @@ class TestEncrypt:
         # self.assertEqual(" ".join(cmd), "foo")
 
         cmd_output = get_cmd_output(cmd)
-        private_message = message_from_string(cmd_output)
+        private_message = message_from_string(cmd_output, policy=default)
         payload = private_message.get_payload().splitlines()
 
         assert "Hey Bob, now you see me..!" == payload[len(payload) - 1]
@@ -115,7 +116,7 @@ class TestEncrypt:
             "-inkey", os.path.join(FIXTURE_DIR, 'CarlPrivRSASign.pem'),
         ]
         cmd_output = get_cmd_output(cmd)
-        private_message = message_from_string(cmd_output)
+        private_message = message_from_string(cmd_output, policy=default)
 
         result = normalize_line_endings(private_message.get_payload())
 

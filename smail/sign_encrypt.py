@@ -1,12 +1,15 @@
 from copy import deepcopy
 from email import message_from_bytes, message_from_string
+from email.policy import default
 from email.header import Header
 
 from asn1crypto import x509
 from oscrypto import asymmetric
 
-from smail.encrypt import encrypt_message
-from smail.sign import sign_message
+from smail.encrypt import encrypt_message, decrypt_message
+from smail.sign import sign_message, verify_message
+
+from .message import encode_message, decode_message
 
 
 def _pop_headers(msg, blacklist=None):
@@ -83,15 +86,8 @@ def sign_and_encrypt_message(message, key_signer, cert_signer, certs_recipients,
 
     """
 
-    # TODO(frennkie) rewrite this!
     # Get the message content. This could be a string, bytes or a message object
-    passed_as_str = isinstance(message, str)
-    if passed_as_str:
-        message = message_from_string(message)
-
-    passed_as_bytes = isinstance(message, bytes)
-    if passed_as_bytes:
-        message = message_from_bytes(message)
+    message, orig_type = decode_message(message)
 
     # private key
     key_signer = asymmetric.load_private_key(key_signer)
@@ -163,9 +159,36 @@ def sign_and_encrypt_message(message, key_signer, cert_signer, certs_recipients,
     # print(message_signed_enveloped)
     # print("---")
 
-    if passed_as_bytes:
-        return message_signed_enveloped.as_bytes()
-    elif passed_as_str:
-        return message_signed_enveloped.as_string()
-    else:
-        return message_signed_enveloped
+    return encode_message(message_signed_enveloped, orig_type)
+
+
+def decrypt_and_verify_message(message, cert_recipient, key_recipient, cert_signer,
+                               key_password=None, prefix=""):
+    """Takes a signed and encrypted message, decrypts and verifies it and returns the original message.
+
+    Args:
+        message (:obj:`email.message.Message`): The message object to sign and encrypt.
+
+        cert_recipient (`bytes`, `str` or :obj:`asn1crypto.x509.Certificate`): Certificate/Public Key
+            (belonging to Private Key) of the recipient to find the recipient in the recipients_info
+        key_recipient (`bytes`, `str` or :obj:`asn1crypto.keys.PrivateKeyInfo`): Private key used to
+            decrypt the message. (A byte string of file contents, a unicode string filename or an
+            asn1crypto.keys.PrivateKeyInfo object)
+        cert_signer (`bytes`, `str` or :obj:`asn1crypto.x509.Certificate`): Certificate/Public Key
+            of the signer to verify the signature
+        key_password (str): (Optional) the password for the private key in key_recipient
+        prefix (str): Content type prefix (e.g. "x-"). Default to ""
+
+    Returns:
+         :obj:`email.message.Message`: decrypted and verified
+    """
+
+    message, orig_type = decode_message(message)
+
+    # Decrypt message first
+    decrypted_message = decrypt_message(message, cert_recipient, key_recipient, key_password, prefix)
+
+    # Verify it
+    verified_message = verify_message(decrypted_message, cert_signer, prefix)
+
+    return encode_message(verified_message, orig_type)
