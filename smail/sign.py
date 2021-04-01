@@ -155,10 +155,18 @@ def sign_message(message, key_signer, cert_signer,
 
 
 def verify_message(message, cert_signer, prefix=""):
-    """blah
+    """Takes a signed message and verifies the signature. Returns the original unsigned message.
+
+    Args:
+        message (:obj:`email.message.Message`): The message object to sign.
+        cert_signer (`bytes`, `str` or :obj:`asn1crypto.x509.Certificate` or
+            :obj:`oscrypto.asymmetric.Certificate`): Certificate/Public Key of the signer
+        prefix (str): Content type prefix (e.g. "x-"). Default to ""
+
+    Returns:
+         :obj:`email.message.Message`: original message
 
     """
-
     # Find the signature
     signature_data = None
     original_message = None
