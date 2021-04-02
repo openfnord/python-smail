@@ -1,7 +1,5 @@
 # _*_ coding: utf-8 _*_
-import email
 import os
-import re
 from email import message_from_string
 from email.policy import default
 from tempfile import mkstemp
@@ -9,7 +7,7 @@ from tempfile import mkstemp
 import pytest
 
 from smail.sign import verify_message
-from smail.utils import get_cmd_output, normalize_line_endings
+from smail.utils import get_cmd_output
 from .conftest import FIXTURE_DIR
 
 

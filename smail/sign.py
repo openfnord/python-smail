@@ -1,6 +1,5 @@
 # _*_ coding: utf-8 _*_
 import base64
-import hashlib
 from copy import deepcopy
 from email import message_from_bytes
 from email.mime.base import MIMEBase

@@ -1,6 +1,4 @@
 from copy import deepcopy
-from email import message_from_bytes, message_from_string
-from email.policy import default
 from email.header import Header
 
 from asn1crypto import x509
