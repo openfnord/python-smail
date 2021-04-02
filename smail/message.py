@@ -101,18 +101,20 @@ def decode_message(message):
         :obj:`message`: A message object, :Type:`type`: the original type the message was in
     """
 
+    mime_msg = message
+
     # Get the message content. This could be a string, bytes or a message object
     passed_as_str = isinstance(message, str)
     if passed_as_str:
-        message = message_from_string(message, policy=default)
+        mime_msg = message_from_string(message, policy=default)
 
     passed_as_bytes = isinstance(message, bytes)
     if passed_as_bytes:
-        message = message_from_bytes(message, policy=default)
+        mime_msg = message_from_bytes(message, policy=default)
 
     # Extract the message payload without conversion, & the outermost MIME header / Content headers. This allows
     # the MIME content to be rendered for any outermost MIME type incl. multipart
-    return deepcopy(message), type(message)
+    return deepcopy(mime_msg), type(message)
 
 
 def encode_message(message, message_type):

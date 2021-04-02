@@ -4,6 +4,7 @@ from email.mime.text import MIMEText
 
 from asn1crypto import cms
 from asn1crypto.x509 import Certificate as AsnCryptoCertificate
+from asn1crypto.algos import Rc2Params
 from oscrypto import asymmetric
 from oscrypto.asymmetric import dump_certificate
 
@@ -261,7 +262,12 @@ def decrypt_message(message, cert_recipient, key_recipient, key_password=None, p
     encrypted_content_info = content_info['content']['encrypted_content_info']
     algorithm_info = encrypted_content_info['content_encryption_algorithm']
     content_encryption_alg = algorithm_info['algorithm'].native
-    iv = algorithm_info['parameters']['iv'].native
+
+    # Workaround for a bug in asn1crypto - https://github.com/wbond/asn1crypto/issues/204
+    if isinstance(algorithm_info['parameters'], Rc2Params):
+        iv = algorithm_info['parameters']['iv'].native
+    else:
+        iv = algorithm_info.encryption_iv
 
     # Decrypt content
     ciphertext = encrypted_content_info['encrypted_content'].native
