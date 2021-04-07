@@ -91,7 +91,7 @@ class TestMessage:
         msgs = []
         for f_name in file_list:
             with open(os.path.join(cls.test_dir, f_name), 'rb') as f:
-                msg = email.message_from_bytes(f.read())
+                msg = email.message_from_bytes(f.read(), policy=email.policy.default)
                 assert isinstance(msg, Message)
                 msgs.append(msg)
 

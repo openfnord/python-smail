@@ -1,11 +1,13 @@
 import os
-from email import encoders
+from copy import deepcopy
+from email import encoders, message_from_string, message_from_bytes
 from email.header import Header
 from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate, formataddr
+from email.policy import default
 
 COMMASPACE = ', '
 
@@ -88,3 +90,47 @@ def make_msg(sender_addr, sender_name=None,
                 msg_root.attach(msg_attach)
 
     return msg_root
+
+
+def decode_message(message):
+    """Decodes messages in various formats to a message object
+    Args:
+        message (bytes, str or :obj:`email.message.Message`): Message to be decoded.
+
+    Returns:
+        :obj:`message`: A message object, :Type:`type`: the original type the message was in
+    """
+
+    mime_msg = message
+
+    # Get the message content. This could be a string, bytes or a message object
+    passed_as_str = isinstance(message, str)
+    if passed_as_str:
+        mime_msg = message_from_string(message, policy=default)
+
+    passed_as_bytes = isinstance(message, bytes)
+    if passed_as_bytes:
+        mime_msg = message_from_bytes(message, policy=default)
+
+    # Extract the message payload without conversion, & the outermost MIME header / Content headers. This allows
+    # the MIME content to be rendered for any outermost MIME type incl. multipart
+    return deepcopy(mime_msg), type(message)
+
+
+def encode_message(message, message_type):
+    """Encodes message objects to various types
+    Args:
+        message (:obj:`email.message.Message`): Message to be encoded.
+        message_type (Type): Internal type to cast the message to.
+        If type is not `str` or `bytes`, the original object is returned
+
+    Returns:
+        message (bytes, str or :obj:`email.message.Message`): Encoded message.
+    """
+
+    if message_type is str:
+        return message.as_string()
+    if message_type is bytes:
+        return message.as_bytes()
+
+    return message

@@ -4,12 +4,12 @@ from email import message_from_string
 from email.policy import default
 from tempfile import mkstemp
 
-from smail.encrypt import encrypt_message
+from smail.encrypt import decrypt_message
 from smail.utils import get_cmd_output, normalize_line_endings
 from .conftest import FIXTURE_DIR
 
 
-class TestEncrypt:
+class TestDecrypt:
     @classmethod
     def setup_class(cls):
         """ setup any state specific to the execution of the given class (which
@@ -29,23 +29,22 @@ class TestEncrypt:
             "Now you see me.",
         ]
 
-        certs_recipients = [os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem')]
-        result = encrypt_message("\n".join(message), certs_recipients, content_enc_alg=algorithm)
-
         fd, tmp_file = mkstemp()
-        os.write(fd, result.encode())
+        os.write(fd, "\n".join(message).encode())
+
+        cert_recipient = os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem')
+        key_recipient = os.path.join(FIXTURE_DIR, 'CarlPrivRSASign.pem')
 
         cmd = [
-            self.openssl_binary, "smime", "-decrypt",
+            self.openssl_binary, "smime", "-encrypt",
             "-in", tmp_file,
-            "-inkey", os.path.join(FIXTURE_DIR, 'CarlPrivRSASign.pem'),
+            "-" + algorithm, cert_recipient
         ]
 
-        # self.assertEqual(" ".join(cmd), "foo")
-
         cmd_output = get_cmd_output(cmd)
-        private_message = message_from_string(cmd_output, policy=default)
-        payload = private_message.get_payload().splitlines()
+        result = decrypt_message(cmd_output, cert_recipient, key_recipient, prefix="x-")
+        decrypted_message = message_from_string(result, policy=default)
+        payload = decrypted_message.get_payload().splitlines()
 
         assert "Now you see me." == payload[len(payload) - 1]
 
@@ -58,37 +57,36 @@ class TestEncrypt:
             "Hey Bob, now you see me..!",
         ]
 
-        certs_recipients = [os.path.join(FIXTURE_DIR, 'BobRSASignByCarl.pem')]
-        result = encrypt_message("\n".join(message), certs_recipients, content_enc_alg=algorithm)
-
         fd, tmp_file = mkstemp()
-        os.write(fd, result.encode())
+        os.write(fd, "\n".join(message).encode())
+
+        cert_recipient = os.path.join(FIXTURE_DIR, 'BobRSASignByCarl.pem')
+        key_recipient = os.path.join(FIXTURE_DIR, 'BobPrivRSAEncrypt.pem')
 
         cmd = [
-            self.openssl_binary, "smime", "-decrypt",
+            self.openssl_binary, "smime", "-encrypt",
             "-in", tmp_file,
-            "-inkey", os.path.join(FIXTURE_DIR, 'BobPrivRSAEncrypt.pem'),
+            "-" + algorithm, cert_recipient
         ]
 
-        # self.assertEqual(" ".join(cmd), "foo")
-
         cmd_output = get_cmd_output(cmd)
-        private_message = message_from_string(cmd_output, policy=default)
-        payload = private_message.get_payload().splitlines()
+        result = decrypt_message(cmd_output, cert_recipient, key_recipient, prefix="x-")
+        decrypted_message = message_from_string(result, policy=default)
+        payload = decrypted_message.get_payload().splitlines()
 
         assert "Hey Bob, now you see me..!" == payload[len(payload) - 1]
 
     def test_message_to_bob_tripledes_cbc(self, ):
-        self.assert_message_to_bob("tripledes_3key")
+        self.assert_message_to_bob("des3")
 
     def test_message_to_carl_tripledes_cbc(self, ):
-        self.assert_message_to_carl("tripledes_3key")
+        self.assert_message_to_carl("des3")
 
     def test_message_to_carl_aes128_cbc(self):
-        self.assert_message_to_carl("aes128_cbc")
+        self.assert_message_to_carl("aes-128-cbc")
 
     def test_message_to_carl_aes256_cbc(self, ):
-        self.assert_message_to_carl("aes256_cbc")
+        self.assert_message_to_carl("aes-256-cbc")
 
     def test_message_with_breaks_to_carl_aes256_cbc(self):
         message = [
@@ -104,20 +102,21 @@ class TestEncrypt:
             "Goodbye!",
         ]
 
-        certs_recipients = [os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem')]
-        result = encrypt_message("\n".join(message), certs_recipients)
-
         fd, tmp_file = mkstemp()
-        os.write(fd, result.encode())
+        os.write(fd, "\n".join(message).encode())
+
+        cert_recipient = os.path.join(FIXTURE_DIR, 'CarlRSASelf.pem')
+        key_recipient = os.path.join(FIXTURE_DIR, 'CarlPrivRSASign.pem')
 
         cmd = [
-            self.openssl_binary, "smime", "-decrypt",
+            self.openssl_binary, "smime", "-encrypt",
             "-in", tmp_file,
-            "-inkey", os.path.join(FIXTURE_DIR, 'CarlPrivRSASign.pem'),
+            "-aes-256-cbc", cert_recipient
         ]
+
         cmd_output = get_cmd_output(cmd)
-        private_message = message_from_string(cmd_output, policy=default)
+        result = decrypt_message(cmd_output, cert_recipient, key_recipient, prefix="x-")
+        decrypted_message = message_from_string(result, policy=default)
+        payload = normalize_line_endings(decrypted_message.get_payload())
 
-        result = normalize_line_endings(private_message.get_payload())
-
-        assert "Hello,\n\nthis is a message with line breaks.\nAnd some text.\n\nGoodbye!" == result
+        assert "Hello,\n\nthis is a message with line breaks.\nAnd some text.\n\nGoodbye!" == payload

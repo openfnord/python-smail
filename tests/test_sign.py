@@ -3,6 +3,7 @@ import email
 import os
 import re
 from email import message_from_string
+from email.policy import default
 from tempfile import mkstemp
 
 import pytest
@@ -46,7 +47,7 @@ class TestSign:
         ("sha512", "pss", False)
     ])
     def test_message_from_alice(self, digest_alg, sig_alg, depre):
-        msg = email.message_from_string("\n".join(self.message))
+        msg = email.message_from_string("\n".join(self.message), policy=default)
         assert isinstance(msg, email.message.Message)
 
         # load cert & key
@@ -68,7 +69,7 @@ class TestSign:
         ]
         # assert " ".join(cmd) == "foo"
         cmd_output = get_cmd_output(cmd)
-        private_message = message_from_string(cmd_output)
+        private_message = message_from_string(cmd_output, policy=default)
         payload = private_message.get_payload().splitlines()
 
         # assert payload == "foo"
@@ -82,7 +83,7 @@ class TestSign:
         ("sha256", "rsa", False, True, True),
     ])
     def test_message_from_alice_includes(self, digest_alg, sig_alg, depre, include_cert, include_ca):
-        msg = email.message_from_string("\n".join(self.message))
+        msg = email.message_from_string("\n".join(self.message), policy=default)
         assert isinstance(msg, email.message.Message)
 
         # load cert & key
@@ -114,7 +115,7 @@ class TestSign:
 
         # assert " ".join(cmd) == "foo"
         cmd_output = get_cmd_output(cmd)
-        private_message = message_from_string(cmd_output)
+        private_message = message_from_string(cmd_output, policy=default)
         payload = private_message.get_payload().splitlines()
 
         # assert payload == "foo"
