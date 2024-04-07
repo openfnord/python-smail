@@ -33,7 +33,7 @@ class TestSign:
         ]
 
     @pytest.mark.parametrize(
-        "digest_alg,sig_alg,depre",
+        "digest_alg,sig_alg,allow_deprecated",
         [
             ("sha1", "rsa", True),
             ("sha256", "rsa", False),
@@ -43,7 +43,7 @@ class TestSign:
             # ("sha512", "pss", False),  # TODO(frennkie): fails
         ],
     )
-    def test_message_from_alice(self, digest_alg, sig_alg, depre):
+    def test_message_from_alice(self, digest_alg: str, sig_alg: str, allow_deprecated):
         msg = email.message_from_string("\n".join(self.message))
         assert isinstance(msg, email.message.Message)
 
@@ -52,7 +52,7 @@ class TestSign:
         key_signer = os.path.join(FIXTURE_DIR, "AlicePrivRSA2048.pem")
 
         msg_signed = sign_message(msg, key_signer, cert_signer, digest_alg=digest_alg, sig_alg=sig_alg,
-                                  allow_deprecated=depre)
+                                  allow_deprecated=allow_deprecated)
 
         fd, tmp_file = mkstemp()
         os.write(fd, msg_signed.as_bytes())
@@ -68,12 +68,11 @@ class TestSign:
             "-CAfile",
             os.path.join(FIXTURE_DIR, "CarlRSA2048Self.pem"),
         ]
-        # assert " ".join(cmd) == "foo"
+
         cmd_output = get_cmd_output(cmd)
         private_message = message_from_string(cmd_output)
         payload = private_message.get_payload().splitlines()
 
-        # assert payload == "foo"
         assert re.compile(r".*Verification successful.*").search(cmd_output) is not None
         assert "Goodbye!" in payload[len(payload) - 1]
 
@@ -132,11 +131,9 @@ class TestSign:
             os.path.join(FIXTURE_DIR, "CarlRSA2048Self.pem"),
         ]
 
-        # assert " ".join(cmd) == "foo"
         cmd_output = get_cmd_output(cmd)
         private_message = message_from_string(cmd_output)
         payload = private_message.get_payload().splitlines()
 
-        # assert payload == "foo"
         assert re.compile(r".*Verification successful.*").search(cmd_output) is not None
         assert "Goodbye!" in payload[len(payload) - 1]

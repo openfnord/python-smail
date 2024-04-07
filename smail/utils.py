@@ -40,7 +40,7 @@ def get_cmd_output(args):
         result = subprocess.check_output(args, stderr=subprocess.STDOUT)
 
     except subprocess.CalledProcessError as err:
-        raise Exception(f'Running shell command "{err.cmd}" caused ' f"error: {err.output} (RC: {err.returncode})")
+        raise Exception(f"Running shell command \"{err.cmd}\" caused error: {err.output} (RC: {err.returncode})")
 
     except Exception as err:
         raise Exception(f"Error: {err}")
