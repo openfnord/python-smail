@@ -7,6 +7,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 0.x.0 (unreleased)
 ------------------
+- tbd
+
+
+0.10.0 (2024-04-07)
+-------------------
+
 - change: switch default branch to main
 - add: test cases using attachments
 - fix: header Content-Transfer-Encoding no longer removed in sign_and_encrypt_message
