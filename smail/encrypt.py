@@ -10,6 +10,7 @@ from oscrypto import asymmetric
 from oscrypto.asymmetric import dump_certificate
 
 from .ciphers import TripleDes, AesCbc
+from .utils import normalize_line_endings, pop_headers
 
 
 class UnsupportedAlgorithmError(Exception):
@@ -150,18 +151,9 @@ def encrypt_message(message, certs_recipients,
     # the MIME content to be rendered for any outermost MIME type incl. multipart
     copied_msg = deepcopy(message)
 
-    headers = {}
-    # besides some special ones (e.g. Content-Type) remove all headers before encrypting the body content
-    for hdr_name in copied_msg.keys():
-        if hdr_name in ["Content-Type", "MIME-Version", "Content-Transfer-Encoding"]:
-            continue
+    headers = pop_headers(copied_msg)
 
-        values = copied_msg.get_all(hdr_name)
-        if values:
-            del copied_msg[hdr_name]
-            headers[hdr_name] = values
-
-    content = copied_msg.as_string()
+    content = normalize_line_endings(copied_msg.as_string(), line_ending='windows')
     recipient_infos = []
 
     for recipient_info in _iterate_recipient_infos(certificates, block_cipher.session_key, key_enc_alg=key_enc_alg):

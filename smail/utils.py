@@ -49,3 +49,21 @@ def get_cmd_output(args):
         raise Exception("Error: {}".format(err))
 
     return result.decode()
+
+
+HEADERS_TO_KEEP = ["Content-Type", "MIME-Version", "Content-Transfer-Encoding"]
+
+
+def pop_headers(msg):
+    headers = {}
+    # besides some special ones (e.g. Content-Type) remove all headers before encrypting the body content
+    for hdr_name in msg.keys():
+        if hdr_name.lower() in (h.lower() for h in HEADERS_TO_KEEP):
+            continue
+
+        values = msg.get_all(hdr_name)
+        if values:
+            del msg[hdr_name]
+            headers[hdr_name] = values
+
+    return headers

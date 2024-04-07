@@ -9,6 +9,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ------------------
 - change: switch default branch to main
 - add: test cases using attachments
+- fix: header Content-Transfer-Encoding no longer removed in sign_and_encrypt_message
+- cleanup: duplicate code for header extraction from sign_message and encrypt_message moved to utils,
+  make use of normalize_line_endings to ensure that signed and encrypted messages show as valid in Microsoft Outlook
 
 0.9.0 (2020-10-17)
 ------------------
