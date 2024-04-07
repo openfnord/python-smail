@@ -8,10 +8,18 @@ from .encrypt import encrypt_message
 from .sign import sign_message
 
 
-def sign_and_encrypt_message(message, key_signer, cert_signer, certs_recipients,
-                             digest_alg="sha256", sig_alg="rsa",
-                             attrs=True, prefix="",
-                             content_enc_alg="aes256_cbc", key_enc_alg="rsaes_pkcs1v15"):
+def sign_and_encrypt_message(
+        message,
+        key_signer,
+        cert_signer,
+        certs_recipients,
+        digest_alg="sha256",
+        sig_alg="rsa",
+        attrs=True,
+        prefix="",
+        content_enc_alg="aes256_cbc",
+        key_enc_alg="rsaes_pkcs1v15",
+):
     """Takes a message, signs and encrypts it and returns a new signed and encrypted message object.
 
     Args:
@@ -69,12 +77,13 @@ def sign_and_encrypt_message(message, key_signer, cert_signer, certs_recipients,
     # the MIME content to be rendered for any outermost MIME type incl. multipart
     copied_msg = deepcopy(message)
 
-    message_signed = sign_message(copied_msg, key_signer, cert_signer,
-                                  digest_alg=digest_alg, sig_alg=sig_alg,
-                                  attrs=attrs, prefix=prefix)
+    message_signed = sign_message(
+        copied_msg, key_signer, cert_signer, digest_alg=digest_alg, sig_alg=sig_alg, attrs=attrs, prefix=prefix
+    )
 
-    message_signed_enveloped = encrypt_message(message_signed, certs_recipients,
-                                               content_enc_alg=content_enc_alg, key_enc_alg=key_enc_alg)
+    message_signed_enveloped = encrypt_message(
+        message_signed, certs_recipients, content_enc_alg=content_enc_alg, key_enc_alg=key_enc_alg
+    )
 
     if passed_as_bytes:
         return message_signed_enveloped.as_bytes()

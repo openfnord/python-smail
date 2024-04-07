@@ -1,8 +1,0 @@
--r requirements.txt
-coverage<5.0.0
-flake8
-pytest
-pytest-cov
-Sphinx
-sphinxcontrib-napoleon
-tox

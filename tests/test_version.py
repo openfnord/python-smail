@@ -1,6 +1,6 @@
 import unittest
 
-from smail.version import __version_info__, __version__
+from smail.version import __version__, __version_info__
 
 
 class VersionTest(unittest.TestCase):

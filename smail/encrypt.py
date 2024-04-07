@@ -1,7 +1,6 @@
-# _*_ coding: utf-8 _*_
 import base64
 from copy import deepcopy
-from email import message_from_string, message_from_bytes
+from email import message_from_bytes, message_from_string
 from email.mime.text import MIMEText
 
 from asn1crypto import cms
@@ -9,7 +8,7 @@ from asn1crypto.x509 import Certificate as AsnCryptoCertificate
 from oscrypto import asymmetric
 from oscrypto.asymmetric import dump_certificate
 
-from .ciphers import TripleDes, AesCbc
+from .ciphers import AesCbc, TripleDes
 from .utils import normalize_line_endings, pop_headers
 
 
@@ -25,25 +24,23 @@ def _get_content_encryption_algorithm(alg):
     algs = {
         "tripledes_3key": TripleDes(alg, key_size=24),
         "aes128_cbc": AesCbc(alg, key_size=16),
-        "aes256_cbc": AesCbc(alg, key_size=32)
+        "aes256_cbc": AesCbc(alg, key_size=32),
     }
     try:
         return algs[alg]
     except KeyError:
-        raise UnsupportedAlgorithmError("selected algorithm \"{}\" not in: "
-                                        "{}".format(alg, ", ".join(algs.keys())))
+        raise UnsupportedAlgorithmError('selected algorithm "{}" not in: ' "{}".format(alg, ", ".join(algs.keys())))
 
 
 def _get_key_encryption_algorithm(alg):
     algs = {
         "rsaes_pkcs1v15": asymmetric.rsa_pkcs1v15_encrypt,
-        "rsa": asymmetric.rsa_pkcs1v15_encrypt  # rsa is mapped to rsaes_pkcs1v15 in asn1crypto
+        "rsa": asymmetric.rsa_pkcs1v15_encrypt,  # rsa is mapped to rsaes_pkcs1v15 in asn1crypto
     }
     try:
         return algs[alg]
     except KeyError:
-        raise UnsupportedAlgorithmError("selected algorithm \"{}\" not in: "
-                                        "{}".format(alg, ", ".join(algs.keys())))
+        raise UnsupportedAlgorithmError('selected algorithm "{}" not in: ' "{}".format(alg, ", ".join(algs.keys())))
 
 
 def _iterate_recipient_infos(certs, session_key, key_enc_alg):
@@ -81,28 +78,31 @@ def get_recipient_info_for_cert(cert, session_key, key_enc_alg="rsaes_pkcs1v15")
 
     # load asymmetric.Certificate as asn1crypto.x509.Certificate in order
     # to get issuer and serial in correct format for CMS Recipient Info object
-    asn1_cert = AsnCryptoCertificate.load(dump_certificate(cert, encoding='der'))
+    asn1_cert = AsnCryptoCertificate.load(dump_certificate(cert, encoding="der"))
 
     # asymmetrically encrypt session key for recipient (identified by issuer + serial)
     key_enc_func = _get_key_encryption_algorithm(key_enc_alg)
     encrypted_key = key_enc_func(cert.public_key, session_key)
 
-    return cms.KeyTransRecipientInfo({
-        "version": "v0",
-        "rid": cms.IssuerAndSerialNumber({
-            "issuer": asn1_cert.issuer,
-            "serial_number": asn1_cert.serial_number,
-        }),
-        "key_encryption_algorithm": {
-            "algorithm": key_enc_alg,
-            "parameters": None,
-        },
-        "encrypted_key": encrypted_key,
-    })
+    return cms.KeyTransRecipientInfo(
+        {
+            "version": "v0",
+            "rid": cms.IssuerAndSerialNumber(
+                {
+                    "issuer": asn1_cert.issuer,
+                    "serial_number": asn1_cert.serial_number,
+                }
+            ),
+            "key_encryption_algorithm": {
+                "algorithm": key_enc_alg,
+                "parameters": None,
+            },
+            "encrypted_key": encrypted_key,
+        }
+    )
 
 
-def encrypt_message(message, certs_recipients,
-                    content_enc_alg="aes256_cbc", key_enc_alg="rsaes_pkcs1v15", prefix=""):
+def encrypt_message(message, certs_recipients, content_enc_alg="aes256_cbc", key_enc_alg="rsaes_pkcs1v15", prefix=""):
     """Takes a message and returns a new message with the original content as encrypted body
 
     Take the contents of the message parameter, formatted as in RFC 2822 (type bytes, str or
@@ -153,7 +153,7 @@ def encrypt_message(message, certs_recipients,
 
     headers = pop_headers(copied_msg)
 
-    content = normalize_line_endings(copied_msg.as_string(), line_ending='windows')
+    content = normalize_line_endings(copied_msg.as_string(), line_ending="windows")
     recipient_infos = []
 
     for recipient_info in _iterate_recipient_infos(certificates, block_cipher.session_key, key_enc_alg=key_enc_alg):
@@ -183,7 +183,7 @@ def encrypt_message(message, certs_recipients,
         ("MIME-Version", "1.0"),
         (
             "Content-Type",
-            "application/{}pkcs7-mime; smime-type=enveloped-data; name=smime.p7m".format(prefix),
+            f"application/{prefix}pkcs7-mime; smime-type=enveloped-data; name=smime.p7m",
         ),
         ("Content-Transfer-Encoding", "base64"),
         ("Content-Disposition", "attachment; filename=smime.p7m"),

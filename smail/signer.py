@@ -1,5 +1,3 @@
-# *-* coding: utf-8 *-*
-
 """signer.py
 
 Forked from https://github.com/m32/endesive/blob/master/endesive/signer.py
@@ -32,14 +30,21 @@ SOFTWARE.
 import hashlib
 from datetime import datetime, timezone
 
-from asn1crypto import cms, algos, core, x509
+from asn1crypto import algos, cms, core, x509
 from oscrypto import asymmetric
 
 
-def sign_bytes(data_unsigned, key_signer, cert_signer,
-               digest_alg="sha256", sig_alg='rsa', attrs=True,
-               include_cert_signer=True, additional_certs=None,
-               signed_value=None, ):
+def sign_bytes(
+        data_unsigned,
+        key_signer,
+        cert_signer,
+        digest_alg="sha256",
+        sig_alg="rsa",
+        attrs=True,
+        include_cert_signer=True,
+        additional_certs=None,
+        signed_value=None,
+):
     """Takes bytes, creates a ContentInfo structure and returns it as signed bytes
 
     Notes:
@@ -89,88 +94,102 @@ def sign_bytes(data_unsigned, key_signer, cert_signer,
             certificates.append(additional)
 
     if digest_alg not in ["md5", "sha1", "sha256", "sha512"]:
-        raise AttributeError("digest algorithm unsupported: {}".format(digest_alg))
+        raise AttributeError(f"digest algorithm unsupported: {digest_alg}")
 
     if signed_value is None:
         signed_value = getattr(hashlib, digest_alg)(data_unsigned).digest()
     signed_time = datetime.now(tz=timezone.utc)
 
     signer = {
-        'version': 'v1',
-        'sid': cms.SignerIdentifier({
-            'issuer_and_serial_number': cms.IssuerAndSerialNumber({
-                'issuer': cert_signer.issuer,
-                'serial_number': cert_signer.serial_number,
-            }),
-        }),
-        'digest_algorithm': algos.DigestAlgorithm({'algorithm': digest_alg}),
-        'signature': signed_value,
+        "version": "v1",
+        "sid": cms.SignerIdentifier(
+            {
+                "issuer_and_serial_number": cms.IssuerAndSerialNumber(
+                    {
+                        "issuer": cert_signer.issuer,
+                        "serial_number": cert_signer.serial_number,
+                    }
+                ),
+            }
+        ),
+        "digest_algorithm": algos.DigestAlgorithm({"algorithm": digest_alg}),
+        "signature": signed_value,
     }
 
     pss_digest_alg = digest_alg  # use same digest algorithm for pss signature as for message
 
     if sig_alg == "rsa":
-        signer['signature_algorithm'] = algos.SignedDigestAlgorithm({'algorithm': 'rsassa_pkcs1v15'})
+        signer["signature_algorithm"] = algos.SignedDigestAlgorithm({"algorithm": "rsassa_pkcs1v15"})
 
     elif sig_alg == "pss":
         salt_length = getattr(hashlib, pss_digest_alg)().digest_size
-        signer['signature_algorithm'] = algos.SignedDigestAlgorithm({
-            'algorithm': 'rsassa_pss',
-            'parameters': algos.RSASSAPSSParams({
-                'hash_algorithm': algos.DigestAlgorithm({'algorithm': pss_digest_alg}),
-                'mask_gen_algorithm': algos.MaskGenAlgorithm({
-                    'algorithm': algos.MaskGenAlgorithmId('mgf1'),
-                    'parameters': {
-                        'algorithm': algos.DigestAlgorithmId(pss_digest_alg),
+        signer["signature_algorithm"] = algos.SignedDigestAlgorithm(
+            {
+                "algorithm": "rsassa_pss",
+                "parameters": algos.RSASSAPSSParams(
+                    {
+                        "hash_algorithm": algos.DigestAlgorithm({"algorithm": pss_digest_alg}),
+                        "mask_gen_algorithm": algos.MaskGenAlgorithm(
+                            {
+                                "algorithm": algos.MaskGenAlgorithmId("mgf1"),
+                                "parameters": {
+                                    "algorithm": algos.DigestAlgorithmId(pss_digest_alg),
+                                },
+                            }
+                        ),
+                        "salt_length": algos.Integer(salt_length),
+                        "trailer_field": algos.TrailerField(1),
                     }
-                }),
-                'salt_length': algos.Integer(salt_length),
-                'trailer_field': algos.TrailerField(1)
-            })
-        })
+                ),
+            }
+        )
 
     else:
-        raise AttributeError("signature algorithm unsupported: {}".format(sig_alg))
+        raise AttributeError(f"signature algorithm unsupported: {sig_alg}")
 
     if attrs:
         if attrs is True:
-            signer['signed_attrs'] = [
-                cms.CMSAttribute({
-                    'type': cms.CMSAttributeType('content_type'),
-                    'values': ('data',),
-                }),
-                cms.CMSAttribute({
-                    'type': cms.CMSAttributeType('message_digest'),
-                    'values': (signed_value,),
-                }),
-                cms.CMSAttribute({
-                    'type': cms.CMSAttributeType('signing_time'),
-                    'values': (cms.Time({'utc_time': core.UTCTime(signed_time)}),)
-                }),
+            signer["signed_attrs"] = [
+                cms.CMSAttribute(
+                    {
+                        "type": cms.CMSAttributeType("content_type"),
+                        "values": ("data",),
+                    }
+                ),
+                cms.CMSAttribute(
+                    {
+                        "type": cms.CMSAttributeType("message_digest"),
+                        "values": (signed_value,),
+                    }
+                ),
+                cms.CMSAttribute(
+                    {"type": cms.CMSAttributeType("signing_time"),
+                     "values": (cms.Time({"utc_time": core.UTCTime(signed_time)}),)}
+                ),
             ]
         else:
-            signer['signed_attrs'] = attrs
+            signer["signed_attrs"] = attrs
 
     config = {
-        'version': 'v1',
-        'digest_algorithms': cms.DigestAlgorithms((
-            algos.DigestAlgorithm({'algorithm': digest_alg}),
-        )),
-        'encap_content_info': {
-            'content_type': 'data',
+        "version": "v1",
+        "digest_algorithms": cms.DigestAlgorithms((algos.DigestAlgorithm({"algorithm": digest_alg}),)),
+        "encap_content_info": {
+            "content_type": "data",
         },
-        'certificates': certificates,
-        'signer_infos': [
+        "certificates": certificates,
+        "signer_infos": [
             signer,
         ],
     }
-    data_signed = cms.ContentInfo({
-        'content_type': cms.ContentType('signed_data'),
-        'content': cms.SignedData(config),
-    })
+    data_signed = cms.ContentInfo(
+        {
+            "content_type": cms.ContentType("signed_data"),
+            "content": cms.SignedData(config),
+        }
+    )
     if attrs:
-        to_sign = data_signed['content']['signer_infos'][0]['signed_attrs'].dump()
-        to_sign = b'\x31' + to_sign[1:]
+        to_sign = data_signed["content"]["signer_infos"][0]["signed_attrs"].dump()
+        to_sign = b"\x31" + to_sign[1:]
     else:
         to_sign = data_unsigned
 
@@ -181,8 +200,8 @@ def sign_bytes(data_unsigned, key_signer, cert_signer,
         signed_value_signature = asymmetric.rsa_pss_sign(key_signer, to_sign, pss_digest_alg)
 
     else:
-        raise AttributeError("signature algorithm unsupported: {}".format(sig_alg))
+        raise AttributeError(f"signature algorithm unsupported: {sig_alg}")
 
-    data_signed['content']['signer_infos'][0]['signature'] = signed_value_signature
+    data_signed["content"]["signer_infos"][0]["signature"] = signed_value_signature
 
     return data_signed.dump()

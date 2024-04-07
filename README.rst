@@ -14,7 +14,7 @@ Python library for parsing and serializing ASN.1 structures."*.
 Requirements
 ------------
 
-* Python 3.5+
+* Python 3.9+
 * asn1crypto
 * oscrypto
 

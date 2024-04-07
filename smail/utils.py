@@ -1,13 +1,11 @@
-# Utilities
-
 import subprocess
 
-UNIX_NEWLINE = '\n'
-WINDOWS_NEWLINE = '\r\n'
-MAC_NEWLINE = '\r'
+UNIX_NEWLINE = "\n"
+WINDOWS_NEWLINE = "\r\n"
+MAC_NEWLINE = "\r"
 
 
-def normalize_line_endings(lines, line_ending='unix'):
+def normalize_line_endings(lines, line_ending="unix"):
     """Normalizes line endings to unix (\n), windows (\r\n) or mac (\r).
 
     Args:
@@ -19,9 +17,9 @@ def normalize_line_endings(lines, line_ending='unix'):
 
     """
     lines = lines.replace(WINDOWS_NEWLINE, UNIX_NEWLINE).replace(MAC_NEWLINE, UNIX_NEWLINE)
-    if line_ending == 'windows':
+    if line_ending == "windows":
         lines = lines.replace(UNIX_NEWLINE, WINDOWS_NEWLINE)
-    elif line_ending == 'mac':
+    elif line_ending == "mac":
         lines = lines.replace(UNIX_NEWLINE, MAC_NEWLINE)
 
     return lines
@@ -42,11 +40,10 @@ def get_cmd_output(args):
         result = subprocess.check_output(args, stderr=subprocess.STDOUT)
 
     except subprocess.CalledProcessError as err:
-        raise Exception("Running shell command \"{}\" caused "
-                        "error: {} (RC: {})".format(err.cmd, err.output, err.returncode))
+        raise Exception(f'Running shell command "{err.cmd}" caused ' f"error: {err.output} (RC: {err.returncode})")
 
     except Exception as err:
-        raise Exception("Error: {}".format(err))
+        raise Exception(f"Error: {err}")
 
     return result.decode()
 

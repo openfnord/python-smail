@@ -1,46 +1,42 @@
 before_script:
-  - pip install tox
+  - pip install poetry
+  - poetry install --with dev
 
 cache:
   paths:
-  - /root/.cache
+    - /root/.cache
 
 stages:
   - style
   - test
   - package
 
-py36:
+tests:
   stage: test
-  image: python:3.6
+  parallel:
+    matrix:
+      - COMMAND: [ "py311" ]
+        IMAGE: [ "3.11" ]
+  image: python:$IMAGE
   script:
-    - tox -e py36
+    - poetry run tox -e $COMMAND
   artifacts:
     paths:
       - test_output/
     expire_in: 1 day
 
-pep8:
-  image: python:3.6
+ruff:
+  image: python:3.11
   stage: style
   allow_failure: true
   script:
-    - tox -e pep8
+    - poetry run tox -e ruff
 
-wheel:
-  image: python:3.6
+build:
+  image: python:3.11
   stage: package
   script:
-    tox -e wheel
-  artifacts:
-    paths:
-      - dist/
-
-sdist:
-  image: python:3.6
-  stage: package
-  script:
-    tox -e sdist
+    - poetry build
   artifacts:
     paths:
       - dist/
