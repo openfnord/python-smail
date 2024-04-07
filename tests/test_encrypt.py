@@ -4,6 +4,7 @@ from tempfile import mkstemp
 
 from smail.encrypt import encrypt_message
 from smail.utils import get_cmd_output, normalize_line_endings
+
 from .conftest import FIXTURE_DIR
 
 

@@ -5,6 +5,7 @@ from asn1crypto import cms, core, keys, pem, x509
 from oscrypto import asymmetric
 
 from smail.encrypt import get_recipient_info_for_cert
+
 from .conftest import FIXTURE_DIR
 
 

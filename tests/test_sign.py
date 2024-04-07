@@ -8,6 +8,7 @@ import pytest
 
 from smail.sign import sign_message
 from smail.utils import get_cmd_output
+
 from .conftest import FIXTURE_DIR
 
 
