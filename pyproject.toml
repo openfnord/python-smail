@@ -80,6 +80,7 @@ lint.ignore = [
     "RET505"  # ToDo(frennkie): unnecessary else after return
 ]
 
+[tool.tox]
 legacy_tox_ini = """
 [tox]
 isolated_build = True
