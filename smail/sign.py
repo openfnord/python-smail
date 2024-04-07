@@ -7,7 +7,8 @@ from email.mime.multipart import MIMEMultipart
 from asn1crypto import x509
 from oscrypto import asymmetric
 
-from smail.signer import sign_bytes
+from .signer import sign_bytes
+from .utils import normalize_line_endings, pop_headers
 
 
 class UnsupportedDigestError(Exception):
@@ -112,19 +113,9 @@ def sign_message(message, key_signer, cert_signer,
     # make a deep copy of original message to avoid any side effects (original will not be touched)
     copied_msg = deepcopy(message)
 
-    headers = {}
-    # besides some special ones (e.g. Content-Type) remove all headers before signing the body content
-    for hdr_name in copied_msg.keys():
-        if hdr_name in ["Content-Type", "MIME-Version", "Content-Transfer-Encoding"]:
-            continue
+    headers = pop_headers(copied_msg)
 
-        values = copied_msg.get_all(hdr_name)
-        if values:
-            del copied_msg[hdr_name]
-            headers[hdr_name] = values
-
-    data_unsigned = copied_msg.as_string().encode()
-    data_unsigned = data_unsigned.replace(b'\n', b'\r\n')
+    data_unsigned = normalize_line_endings(copied_msg.as_string(), line_ending='windows').encode()
     data_signed = sign_bytes(data_unsigned, key_signer, cert_signer, digest_alg, sig_alg, attrs=attrs,
                              include_cert_signer=include_cert_signer, additional_certs=additional_x509)
     data_signed = base64.encodebytes(data_signed)
