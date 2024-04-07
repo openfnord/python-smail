@@ -109,7 +109,12 @@ class TestEncrypt:
             'To: "Carl" <carl@bar.com>',
             "Subject: A message from python",
             "",
-            "Hello,\n" "\n" "this is a message with line breaks.\n" "And some text.\n" "\n" "Goodbye!",
+            "Hello,\n"
+            "\n"
+            "this is a message with line breaks.\n"
+            "And some text.\n"
+            "\n"
+            "Goodbye!",
         ]
 
         certs_recipients = [os.path.join(FIXTURE_DIR, "CarlRSASelf.pem")]
@@ -130,6 +135,16 @@ class TestEncrypt:
         cmd_output = get_cmd_output(cmd)
         private_message = message_from_string(cmd_output)
 
-        result = normalize_line_endings(private_message.get_payload())
-
-        assert "Hello,\n\nthis is a message with line breaks.\nAnd some text.\n\nGoodbye!" == result
+        if os.name == "nt":
+            result = normalize_line_endings(private_message.get_payload(), line_ending="windows")
+            assert ('\r\n'
+                    'Hello,\r\n'
+                    '\r\n\r\n\r\n'
+                    'this is a message with line breaks.\r\n'
+                    '\r\n'
+                    'And some text.\r\n'
+                    '\r\n\r\n\r\n'
+                    'Goodbye!') == result
+        else:
+            result = normalize_line_endings(private_message.get_payload())
+            assert "Hello,\n\nthis is a message with line breaks.\nAnd some text.\n\nGoodbye!" == result

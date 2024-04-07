@@ -85,6 +85,7 @@ legacy_tox_ini = """
 [tox]
 isolated_build = True
 envlist =
+    py35,
     py39,
     py311,
     ruff,
