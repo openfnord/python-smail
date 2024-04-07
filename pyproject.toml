@@ -1,0 +1,107 @@
+[tool.poetry]
+name = "python-smail"
+version = "0.10.0"
+description = "Simple S/MIME e-mails with Python3"
+authors = ["Robert Habermann <mail@rhab.de>"]
+maintainers = ["Robert Habermann <mail@rhab.de>"]
+license = "Apache License (2.0)"
+readme = "README.rst"
+homepage = "https://gitlab.com/rhab/python-smail"
+repository = "https://gitlab.com/rhab/python-smail"
+documentation = "https://gitlab.com/rhab/python-smail"
+keywords = ["smime", "cryptography", "email", "S/MIME", "encrypt", "sign"]
+classifiers = [
+    'Development Status :: 4 - Beta',
+    'Operating System :: OS Independent',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: Apache Software License',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Topic :: Software Development :: Libraries',
+    'Topic :: Communications :: Email',
+    'Topic :: Security :: Cryptography',
+]
+
+packages = [
+    { include = "smail" },
+]
+
+exclude = ["tests", "docs"]
+
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.13"
+asn1crypto = "^1.5.1"
+oscrypto = "^1.3.0"
+
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+coverage = "^6.0"
+ruff = "^0.3.5"
+mock = "^4.0.3"
+pytest = "^6.2.5"
+pytest-cov = "^3.0.0"
+responses = "^0.13.3"
+tox = "^3.24.4"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+docutils = "^0.20.1"
+sphinx-rtd-theme = "^2.0.0"
+sphinxcontrib-jquery = "^4.1"
+sphinxcontrib-napoleon = "^0.7"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.ruff]
+# enforce 132 char line length
+line-length = 132
+
+# Enforce pyflakes(F), pycodestyle(E, W),
+# isort (I), bugbears (B), pep8-naming (N), flake8-comprehensions (C4) and pyupgrade (UP) rules.
+lint.select = ["F", "E", "W", "I", "B", "N", "RET", "C4", "UP"]
+
+# Ignore some errors
+lint.ignore = [
+    "B904", # ToDo(frennkie): raise from err or None in Exceptions
+    "C416", # ToDo(frennkie): Unnecessary list comprehension
+    "RET505"  # ToDo(frennkie): unnecessary else after return
+]
+
+legacy_tox_ini = """
+[tox]
+isolated_build = True
+envlist =
+    py311,
+    ruff,
+
+[testenv]
+deps =
+    pytest
+    pytest-cov
+    mock
+    responses
+
+commands =
+    pytest -vv tests
+
+[testenv:ruff]
+deps =
+    ruff
+
+commands =
+    ruff check tests/ smail/
+
+"""
