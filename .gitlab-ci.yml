@@ -15,8 +15,8 @@ tests:
   stage: test
   parallel:
     matrix:
-      - COMMAND: [ "py35" ]
-        IMAGE: [ "3.5" ]
+      - COMMAND: [ "py36" ]
+        IMAGE: [ "3.6" ]
       - COMMAND: [ "py39" ]
         IMAGE: [ "3.9" ]
       - COMMAND: [ "py311" ]
