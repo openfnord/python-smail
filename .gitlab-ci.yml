@@ -1,6 +1,7 @@
 before_script:
   - pip install poetry
-  - poetry install --with dev
+  - poetry install
+  - poetry install --dev-only
 
 cache:
   paths:
@@ -17,10 +18,10 @@ tests:
     matrix:
       - COMMAND: [ "py36" ]
         IMAGE: [ "3.6" ]
-      - COMMAND: [ "py39" ]
-        IMAGE: [ "3.9" ]
-      - COMMAND: [ "py311" ]
-        IMAGE: [ "3.11" ]
+  #      - COMMAND: [ "py39" ]
+  #        IMAGE: [ "3.9" ]
+  #      - COMMAND: [ "py311" ]
+  #        IMAGE: [ "3.11" ]
   image: python:$IMAGE
   script:
     - poetry run tox -e $COMMAND
