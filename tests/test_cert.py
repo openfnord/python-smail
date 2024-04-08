@@ -94,19 +94,20 @@ class TestCert:
         assert private_key.algorithm == sig_algo
 
     @pytest.mark.parametrize(
-        "file_name,key,value",
+        "file_name,key,value,sig_algo",
         [
-            ("AliceRSA2048.pem", "common_name", "CarlRSA2048"),
+            ("AliceRSA2048.pem", "common_name", "CarlRSA2048", "rsa"),
             # verisign has a list in the issuer OrderedDict..?!
-            # ("verisign_intermediate.pem", "common_name", "VeriSign Class 3 Public Primary Certification Authority - G5"),
-            ("domain_in_o_component.pem", "common_name", "Go Daddy Secure Certification Authority"),
+            # ("verisign_intermediate.pem", "common_name",
+            #   "VeriSign Class 3 Public Primary Certification Authority - G5"),
+            ("domain_in_o_component.pem", "common_name", "Go Daddy Secure Certification Authority", "rsa"),
             # ToDo(frennkie) ec currently not supported
-            # ("AliceECp256.pem", 70400699072669113604691775782881115307289436427, "CarlECp256", "ec")
+            # ("AliceECp256.pem", 70400699072669113604691775782881115307289436427, "CarlECp256", "secp256r1")
             # ToDo(frennkie) does not work on Windows.. check Linux; maybe open issue with oscrypto
             # ("AlicePSS2048.pem", 643522079216047803454536659318317487253176610229, "CarlPSS2048", "rsassa_pss")
         ],
     )
-    def test_oscrypto_recipient_info(self, file_name, key, value):
+    def test_oscrypto_recipient_info(self, file_name, key, value, sig_algo):
         cert = asymmetric.load_certificate(os.path.join(FIXTURE_DIR, file_name))
 
         assert isinstance(cert, asymmetric.Certificate)

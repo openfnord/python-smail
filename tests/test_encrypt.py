@@ -9,6 +9,8 @@ from .conftest import FIXTURE_DIR
 
 
 class TestEncrypt:
+    openssl_binary = None
+
     @classmethod
     def setup_class(cls):
         """setup any state specific to the execution of the given class (which

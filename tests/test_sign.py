@@ -13,6 +13,8 @@ from .conftest import FIXTURE_DIR
 
 
 class TestSign:
+    openssl_binary = None
+
     @classmethod
     def setup_class(cls):
         """setup any state specific to the execution of the given class (which
@@ -77,7 +79,7 @@ class TestSign:
         assert "Goodbye!" in payload[len(payload) - 1]
 
     @pytest.mark.parametrize(
-        "digest_alg,sig_alg,depre,include_cert,include_ca",
+        "digest_alg,sig_alg,allow_deprecated,include_cert,include_ca",
         [
             ("sha256", "rsa", False, False, False),
             ("sha256", "rsa", False, True, False),
@@ -85,7 +87,7 @@ class TestSign:
             ("sha256", "rsa", False, True, True),
         ],
     )
-    def test_message_from_alice_includes(self, digest_alg, sig_alg, depre, include_cert, include_ca):
+    def test_message_from_alice_includes(self, digest_alg, sig_alg, allow_deprecated, include_cert, include_ca):
         msg = email.message_from_string("\n".join(self.message))
         assert isinstance(msg, email.message.Message)
 
@@ -101,7 +103,7 @@ class TestSign:
                 cert_signer,
                 digest_alg=digest_alg,
                 sig_alg=sig_alg,
-                allow_deprecated=depre,
+                allow_deprecated=allow_deprecated,
                 include_cert_signer=include_cert,
                 additional_certs=[cert_ca],
             )
@@ -112,7 +114,7 @@ class TestSign:
                 cert_signer,
                 digest_alg=digest_alg,
                 sig_alg=sig_alg,
-                allow_deprecated=depre,
+                allow_deprecated=allow_deprecated,
                 include_cert_signer=include_cert,
             )
 
