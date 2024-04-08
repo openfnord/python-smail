@@ -54,10 +54,9 @@ tox = "^3.24.4"
 optional = true
 
 [tool.poetry.group.docs.dependencies]
-docutils = "^0.20.1"
+sphinx = "^5.3.0"
 sphinx-rtd-theme = "^2.0.0"
 sphinxcontrib-jquery = "^4.1"
-sphinxcontrib-napoleon = "^0.7"
 
 
 [build-system]
