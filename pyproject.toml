@@ -33,7 +33,7 @@ exclude = ["tests", "docs"]
 
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.7,<3.13"
 asn1crypto = "^1.5.1"
 oscrypto = { git = "https://github.com/wbond/oscrypto.git", rev = "1547f53" }
 
