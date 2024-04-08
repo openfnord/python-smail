@@ -15,14 +15,14 @@ class TestUtils(unittest.TestCase):
  Windows.
 
 Bye"""
-            self.assertEqual("hello\r\nWindows.\r\n\r\nBye",
+            self.assertEqual("hello\r\n Windows.\r\n\r\nBye",
                              utils.normalize_line_endings(string, line_ending="windows"))
         else:
             string = """hello
  Unix.
 
 Bye"""
-            self.assertEqual("hello\nUnix\n\nBye.", utils.normalize_line_endings(string))
+            self.assertEqual("hello\n Unix.\n\nBye", utils.normalize_line_endings(string))
 
 
 if __name__ == "__main__":
