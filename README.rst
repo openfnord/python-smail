@@ -242,6 +242,10 @@ Versioning
 This software follows `Semantic Versioning`_
 
 
+IMPORTED FROM:
+https://gitlab.com/rhab/python-smail
+
+
 .. _asn1crypto: https://github.com/wbond/asn1crypto
 .. _oscrypto: https://github.com/wbond/oscrypto
 .. _python-smime: https://github.com/balena/python-smime
