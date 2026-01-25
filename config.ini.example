@@ -1,0 +1,25 @@
+[smtp]
+host = mail.example.com
+port = 465
+username = mailuser@example.com
+password = secretmailpass
+use_ssl = true
+#change ssl to False and starttls to True if you use starttls. Change port to 587 with starttls
+use_starttls = false
+timeout = 35
+
+[email]
+from_addr = sender@example.com
+# comma separated list
+to_addrs = alice@example.com, bob@example.com
+
+[smime]
+# cert paths comma separated
+recipient_certs = /path/certs/alice.pem, /path/certs/bob.pem
+signer_cert = /path/certs/signer_cert.pem
+signer_key = /path/private/signer_key.pem
+#cipher = tripledes_3key
+cipher = aes256_cbc
+
+
+

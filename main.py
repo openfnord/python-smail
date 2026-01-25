@@ -1,0 +1,826 @@
+#!/usr/bin/env python3
+
+#Author for copyright purposes ludwig jaffe, 2026
+
+#WARNING CREDENTIALS in config.ini!
+"""
+Tester for sending different styles email using python-smail with:
+- S/MIME encryption, signing, secret text, secret attachments, 
+- plain MIME attachments (logos/images/files) that remain unencrypted
+- triple wrap smime (signed & encrypted and signed again)
+- Mail transport:
+-  SMTP over SSL (port 465) with password authentication (see config.ini)
+-  STARTTLS (port 587) with password authentication (see config.ini)
+
+Requires:
+    pip install python-smail
+"""
+
+import os
+import smtplib
+import configparser #for parsing config.ini
+from pathlib import Path #for parsing config.ini
+from typing import List, Optional, Sequence, Tuple
+
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.image import MIMEImage
+from email.mime.application import MIMEApplication
+from email import encoders
+from email.utils import formatdate, make_msgid
+
+from smail import encrypt_message, sign_and_encrypt_message, sign_message  # python-smail
+
+CONFIG_PATH = Path("config.ini") # path to your config containing credentials
+
+# ----------------------------
+# Configuration objects
+# ----------------------------
+
+class SMTPConfig:
+    """Configuration for SMTP over SSL on port 465."""
+
+    def __init__(
+            self,
+            host: str,
+            port: int = 465,
+            username: Optional[str] = None,
+            password: Optional[str] = None,
+            use_ssl: bool = True,
+            use_starttls: bool = False,
+            timeout: int = 30,
+    ) -> None:
+        self.host = host
+        self.port = port
+        self.username = username
+        self.password = password
+        self.use_ssl = use_ssl
+        self.use_starttls = use_starttls
+        self.timeout = timeout
+
+
+class SMimeConfig:
+    """
+    S/MIME configuration:
+
+    - recipient_certs: list of recipient certificate paths (PEM)
+    - signer_cert / signer_key: sender cert/key
+    - cipher: 'AES128-CBC', 'AES192-CBC', or 'AES256-CBC'
+    """
+
+    VALID_CIPHERS = ("tripledes_3key", "aes128_cbc", "aes256_cbc")  # python-smail ciphers
+
+
+    def __init__(
+            self,
+            recipient_certs: Sequence[str],
+            signer_cert: Optional[str] = None,
+            signer_key: Optional[str] = None,
+            cipher: str = "aes256_cbc",
+    ) -> None:
+        if not recipient_certs:
+            raise ValueError("At least one recipient certificate is required for S/MIME encryption.")
+
+        cipher=cipher.lower()   #allow uppercase config values like AES256_CBC
+        if cipher not in self.VALID_CIPHERS:
+            raise ValueError(f"Unsupported cipher '{cipher}'. Must be one of {self.VALID_CIPHERS}.")
+
+        self.recipient_certs = list(recipient_certs)
+        self.signer_cert = signer_cert
+        self.signer_key = signer_key
+        self.cipher = cipher
+
+
+
+
+# ----------------------------
+# Config reader
+# ----------------------------
+
+
+def _str_to_bool(value: str, default: bool = True) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _split_list(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def load_config(path: Path = CONFIG_PATH) -> tuple[SMTPConfig, SMimeConfig | None, str, list[str]]:
+    """Read SMTP-, S/MIME- und Mail-Defaults from config file.
+
+    return: (smtp_cfg, smime_cfg_or_none, from_addr, to_addrs)
+    """
+
+    config = configparser.ConfigParser()
+    read_files = config.read(path)
+    if not read_files:
+        raise FileNotFoundError(f"config file not found: {path}")
+
+
+    # --- SMTP ---
+    smtp_sec = config["smtp"] if "smtp" in config else {}
+
+    host = smtp_sec.get("host", os.environ.get("SMTP_HOST", "mail.example.com"))
+    port = int(smtp_sec.get("port", os.environ.get("SMTP_PORT", "465")))
+    username = smtp_sec.get("username", os.environ.get("SMTP_USER", "mailuser@example.com"))
+    password = smtp_sec.get("password", os.environ.get("SMTP_PASS", "secretmailpass"))
+    use_ssl = _str_to_bool(smtp_sec.get("use_ssl", "true"))
+    use_starttls = _str_to_bool(smtp_sec.get("use_starttls", "false"))
+    timeout = int(smtp_sec.get("timeout", "30"))
+
+    smtp_cfg = SMTPConfig(
+    host=host,
+    port=port,
+    username=username,
+    password=password,
+    use_ssl=use_ssl,
+    use_starttls=use_starttls,
+    timeout=timeout,
+    )
+ 
+    # --- E-Mail-Defaults ---
+    email_sec = config["email"] if "email" in config else {}
+    from_addr = email_sec.get("from_addr", "sender@example.com")
+    to_addrs = _split_list(email_sec.get("to_addrs", "alice@example.com, bob@example.com"))
+
+    # --- S/MIME ---
+    smime_cfg: SMimeConfig | None = None
+    if "smime" in config:
+        smime_sec = config["smime"]
+        recipient_certs = _split_list(smime_sec.get("recipient_certs"))
+        signer_cert = smime_sec.get("signer_cert")
+        signer_key = smime_sec.get("signer_key")
+        cipher = smime_sec.get("cipher", "AES256-CBC")
+
+    if recipient_certs:
+        smime_cfg = SMimeConfig(
+        recipient_certs=recipient_certs,
+        signer_cert=signer_cert,
+        signer_key=signer_key,
+        cipher=cipher,
+    )
+
+    return smtp_cfg, smime_cfg, from_addr, to_addrs
+ 
+ 
+
+
+# ----------------------------
+# Attachment helpers
+# ----------------------------
+
+def _make_inline_image(path: str, cid: Optional[str] = None) -> MIMEImage:
+    """
+    Create an inline image attachment (logo, image) with a Content-ID for HTML reference.
+    """
+    with open(path, "rb") as f:
+        img = MIMEImage(f.read())
+    cid_value = cid or make_msgid(domain="example.com")[1:-1]  # strip < >
+    img.add_header("Content-ID", f"<{cid_value}>")
+    img.add_header("Content-Disposition", "inline", filename=os.path.basename(path))
+    return img
+
+
+def _make_file_attachment(path: str) -> MIMEBase:
+    """
+    Create a generic file attachment that is safe for binary data.
+    """
+    with open(path, "rb") as f:
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload(f.read())
+    encoders.encode_base64(part)
+    part.add_header("Content-Disposition", "attachment", filename=os.path.basename(path))
+    return part
+
+
+# ----------------------------
+# Build MIME attachments
+# ----------------------------
+
+def build_mime(
+        subject: str,
+        from_addr: str,
+        to_addrs: Sequence[str],
+        text: Optional[str] = None,
+        attachments: Optional[Sequence[Tuple[str, bool]]] = None,
+) -> MIMEMultipart:
+    """
+    Build the MIME container.
+
+    attachments: list of (path, is_image)
+        - is_image=True: inline logo/image
+        - is_image=False: standard attachment
+    """
+    mime = MIMEMultipart("mixed")
+    mime["From"] = from_addr
+    mime["To"] = ", ".join(to_addrs)
+    mime["Subject"] = subject
+    mime["Date"] = formatdate(localtime=True)
+
+    if text:
+        mime.attach(MIMEText(text, "plain", "utf-8"))
+
+    if attachments:
+        for path, is_image in attachments:
+            if is_image:
+                part = _make_inline_image(path)
+            else:
+                part = _make_file_attachment(path)
+            mime.attach(part)
+
+    return mime
+
+
+
+
+# ----------------------------
+# S/MIME wrapping with python-smail
+# ----------------------------
+
+def smime_protect(
+        inner_msg: MIMEMultipart,
+        config: SMimeConfig,
+):
+    """
+    Apply S/MIME encryption or sign+encrypt using python-smail.
+
+    Returns S/MIME part
+    """
+    
+    # Load recipient certs
+    recipient_certs_data: List[bytes] = []
+    for cert_path in config.recipient_certs:
+        with open(cert_path, "rb") as f:
+            recipient_certs_data.append(f.read())
+
+    # Decide whether to sign as well as encrypt
+    if config.signer_cert and config.signer_key:  #sign and encrypt
+        with open(config.signer_cert, "rb") as f_cert, open(config.signer_key, "rb") as f_key:
+            signer_cert_bytes = f_cert.read()
+            signer_key_bytes = f_key.read()
+
+    ## DOCUMENTATION IN LIBRARY:
+    ## sign_and_encrypt_message(message, key_signer, cert_signer, [certs], cipher=...)
+    ## def sign_and_encrypt_message(message, key_signer, cert_signer, certs_recipients,
+    ##                         digest_alg="sha256", sig_alg="rsa",
+    ##                         attrs=True, prefix="",
+    ##                         content_enc_alg="aes256_cbc", key_enc_alg="rsaes_pkcs1v15"):
+    ## 
+    ## """Takes a message, signs and encrypts it and returns a new signed and encrypted message object.
+    ## 
+    ## Args:
+    ##     message (:obj:`email.message.Message`): The message object to sign and encrypt.
+    ##
+    ##    key_signer (`bytes`, `str` or :obj:`asn1crypto.keys.PrivateKeyInfo`): Private key used to
+    ##        sign the message. (A byte string of file contents, a unicode string filename or an
+    ##        asn1crypto.keys.PrivateKeyInfo object)
+    ##    cert_signer (`bytes`, `str` or :obj:`asn1crypto.x509.Certificate`): Certificate/Public Key
+    ##        (belonging to Private Key) that will be included in the signed message. (A byte string of file
+    ##        contents, a unicode string filename or an asn1crypto.x509.Certificate object)
+    ##    certs_recipients (:obj:`list` of `bytes`, `str` or :obj:`asn1crypto.x509.Certificate`): A
+    ##        list of byte string of file contents, a unicode string filename or an
+    ##        asn1crypto.x509.Certificate object for which the message should be encrypted.
+    ##    digest_alg (str): Digest (Hash) Algorithm - e.g. "sha256"
+    ##    sig_alg (str): Signature Algorithm
+    ##    attrs (bool): Whether to include signed attributes (signing time). Default
+    ##        to True
+    ##    prefix (str): Content type prefix (e.g. "x-"). Default to ""
+    ##    content_enc_alg (str): Content Encryption Algorithm - e.g. aes256_cbc
+    ##    key_enc_alg: Key Encryption Algorithm
+    ##
+    ##  Returns:
+    ##     :obj:`email.message.Message`: signed and encrypted message
+    ##
+    ##  Todo:
+    ##    payload not used anymore.. does this still work for MultiPart?!
+    ##
+    ## """
+
+        smime_msg = sign_and_encrypt_message(
+            inner_msg,
+            signer_key_bytes,
+            signer_cert_bytes,
+            recipient_certs_data,
+            "sha256", "rsa", True, "",
+            config.cipher, "rsaes_pkcs1v15",
+	    
+        )
+	
+    else: #encrypt only
+    
+        ## DOCUMENTATION IN LIBRARY:
+        ##
+	## encrypt_message(message, [certs], cipher=...)
+        ##
+	## def encrypt_message(message, certs_recipients,
+        ##             content_enc_alg="aes256_cbc", key_enc_alg="rsaes_pkcs1v15", prefix=""):
+        ##    """Takes a message and returns a new message with the original content as encrypted body
+        ##    
+        ##    Take the contents of the message parameter, formatted as in RFC 2822 (type bytes, str or
+        ##    message) and encrypts them, so that they can only be read by the intended recipient
+        ##    specified by pubkey.
+        ##   
+        ## Args:
+        ##    message (bytes, str or :obj:`email.message.Message`): Message to be encrypted.
+        ##    certs_recipients (:obj:`list` of `bytes`, `str` or :obj:`asn1crypto.x509.Certificate` or
+        ##        :obj:`oscrypto.asymmetric.Certificate): A list of byte string of file contents, a
+        ##        unicode string filename or an asn1crypto.x509.Certificate object
+        ##    key_enc_alg (str): Key Encryption Algorithm
+        ##    content_enc_alg (str): Content Encryption Algorithm
+        ##    prefix (str): Content type prefix (e.g. "x-"). Default to ""
+        ## 
+        ## Returns:
+        ##    :obj:`message`: The new encrypted message (type str or message, as per input).
+        ## 
+        ## Todo:
+        ##    TODO(frennkie) cert_recipients..?!
+        ##   
+        ## """
+        ##
+	
+            smime_msg = encrypt_message(
+            inner_msg,
+            recipient_certs_data,
+            config.cipher, "rsaes_pkcs1v15", ""       
+        )
+
+    return smime_msg
+
+
+#---
+
+#produce triple wrapped smime mail according to RFC2634 section 1.1
+def smime_protect_and_sign_again(
+        inner_msg: MIMEMultipart,
+        config: SMimeConfig,
+):
+    """
+    Apply S/MIME sign+encrypt and sign again using python-smail.
+    This should comply to RFC2634 section 1.1
+    Returns S/MIME part
+    """
+    
+    # Load recipient certs
+    recipient_certs_data: List[bytes] = []
+    for cert_path in config.recipient_certs:
+        with open(cert_path, "rb") as f:
+            recipient_certs_data.append(f.read())
+
+
+    # Decide whether to sign as well as encrypt
+    if config.signer_cert and config.signer_key:
+        with open(config.signer_cert, "rb") as f_cert, open(config.signer_key, "rb") as f_key:
+            signer_cert_bytes = f_cert.read()
+            signer_key_bytes = f_key.read()
+
+    ## sign_and_encrypt_message(message, key_signer, cert_signer, [certs], cipher=...)
+    ## def sign_and_encrypt_message(message, key_signer, cert_signer, certs_recipients,
+    ##                         digest_alg="sha256", sig_alg="rsa",
+    ##                         attrs=True, prefix="",
+    ##                         content_enc_alg="aes256_cbc", key_enc_alg="rsaes_pkcs1v15"):
+    ## 
+    ## """Takes a message, signs and encrypts it and returns a new signed and encrypted message object.
+    ## 
+    ## Args:
+    ##     message (:obj:`email.message.Message`): The message object to sign and encrypt.
+    ##
+    ##    key_signer (`bytes`, `str` or :obj:`asn1crypto.keys.PrivateKeyInfo`): Private key used to
+    ##        sign the message. (A byte string of file contents, a unicode string filename or an
+    ##        asn1crypto.keys.PrivateKeyInfo object)
+    ##    cert_signer (`bytes`, `str` or :obj:`asn1crypto.x509.Certificate`): Certificate/Public Key
+    ##        (belonging to Private Key) that will be included in the signed message. (A byte string of file
+    ##        contents, a unicode string filename or an asn1crypto.x509.Certificate object)
+    ##    certs_recipients (:obj:`list` of `bytes`, `str` or :obj:`asn1crypto.x509.Certificate`): A
+    ##        list of byte string of file contents, a unicode string filename or an
+    ##        asn1crypto.x509.Certificate object for which the message should be encrypted.
+    ##    digest_alg (str): Digest (Hash) Algorithm - e.g. "sha256"
+    ##    sig_alg (str): Signature Algorithm
+    ##    attrs (bool): Whether to include signed attributes (signing time). Default
+    ##        to True
+    ##    prefix (str): Content type prefix (e.g. "x-"). Default to ""
+    ##    content_enc_alg (str): Content Encryption Algorithm - e.g. aes256_cbc
+    ##    key_enc_alg: Key Encryption Algorithm
+    ##
+    ##  Returns:
+    ##     :obj:`email.message.Message`: signed and encrypted message
+    ##
+    ##  Todo:
+    ##    payload not used anymore.. does this still work for MultiPart?!
+    ##
+    ## """
+
+        smime_msg = sign_and_encrypt_message(
+            inner_msg,
+            signer_key_bytes,
+            signer_cert_bytes,
+            recipient_certs_data,
+            "sha256", "rsa", True, "",
+            config.cipher, "rsaes_pkcs1v15",
+        )
+	
+        #sign again
+	
+        ##def sign_message(message, key_signer, cert_signer,
+        ##         digest_alg='sha256', sig_alg='rsa',
+        ##         attrs=True, prefix="", allow_deprecated=False,
+        ##         include_cert_signer=True,
+        ##         additional_certs=None,
+        ##         multipart_class=MIMEMultipart):
+        ##"""Takes a message, signs it and returns a new signed message object.
+        ##
+        ##Args:
+        ##message (:obj:`email.message.Message`): The message object to sign.
+        ##key_signer (`bytes`, `str` or :obj:`asn1crypto.keys.PrivateKeyInfo` or
+        ##    :obj:`oscrypto.asymmetric.PrivateKey`): Private key used to sign the message. (A byte
+        ##    string of file contents, a unicode string filename or an asn1crypto.keys.PrivateKeyInfo
+        ##    object)
+        ##cert_signer (`bytes`, `str` or :obj:`asn1crypto.x509.Certificate` or
+        ##    :obj:`oscrypto.asymmetric.Certificate`): Certificate/Public Key (belonging to Private
+        ##    Key) that will be included in the signed message. (A byte string of file contents, a
+        ##    unicode string filename or an asn1crypto.x509.Certificate object)
+        ##    digest_alg (str): Digest (Hash) Algorithm - e.g. "sha256"
+        ##    sig_alg (str): Signature Algorithm
+        ##    attrs (bool): Whether to include signed attributes (signing time). Default
+        ##     to True
+        ## prefix (str): Content type prefix (e.g. "x-"). Default to ""
+        ## allow_deprecated (bool): Whether deprecated digest algorithms should be allowed.
+        ## include_cert_signer (bool): Whether to include the public certificate of the signer
+        ##     in the signed data. Default to True
+        ## additional_certs (:obj:`list` of :obj:`asn1crypto.x509.Certificate`): List of
+        ##    additional certificates to be included (e.g. Intermediate or Root CA certs).
+        ## multipart_class (class): Which MIMEMultiPart class should be used.
+        ##
+        ##    Returns:
+        ##  :obj:`email.message.Message`: signed message
+        ##
+        ##  """
+        ##
+	
+	
+	#sign previous signed and encrypted message
+        smime_msg_signed = sign_message(
+            smime_msg,
+            signer_key_bytes,
+            signer_cert_bytes,
+            "sha256", "rsa", True, "",
+        )
+        return smime_msg_signed
+        
+    else:
+        #error, no config.signer_cert and config.signer_key
+        raise ValueError("signer cert AND signer key reqired")
+        return ""	
+
+# ----------------------------------
+# SMTP sending via SSL or STARTTLS
+# ----------------------------------
+
+def send_smtp_ssl(
+        smtp_conf: SMTPConfig,
+        from_addr: str,
+        to_addrs: Sequence[str],
+        message_bytes: bytes,
+) -> None:
+    """
+    Send raw RFC822 message over SMTP using SSL (port 465) and username/password.
+    """
+    if smtp_conf.use_ssl:
+        server = smtplib.SMTP_SSL(
+            host=smtp_conf.host,
+            port=smtp_conf.port,
+            timeout=smtp_conf.timeout,
+        )
+    elif smtp_conf.use_starttls:
+        server = smtplib.SMTP(
+            host=smtp_conf.host,
+            port=smtp_conf.port,
+            timeout=smtp_conf.timeout,
+        )
+    
+    else:
+        server = smtplib.SMTP(
+            host=smtp_conf.host,
+            port=smtp_conf.port,
+            timeout=smtp_conf.timeout,
+        )
+
+    try:
+        server.ehlo()
+        if smtp_conf.use_starttls:
+            server.starttls()
+	    
+        if smtp_conf.username and smtp_conf.password:
+            server.login(smtp_conf.username, smtp_conf.password)  # LOGIN auth
+        server.sendmail(from_addr, list(to_addrs), message_bytes)
+    finally:
+        try:
+            server.quit()
+        except Exception:
+            # Avoid raising on quit
+            pass
+
+
+# ----------------------------
+# High-level Functions
+# ----------------------------
+
+def send_mixed_smime_email(
+        smtp_conf: SMTPConfig,
+        smime_conf: SMimeConfig,
+        subject: str,
+        from_addr: str,
+        to_addrs: Sequence[str],
+        secret_text: str,
+        open_text: Optional[str] = None,
+        open_attachments: Optional[Sequence[Tuple[str, bool]]] = None,
+        secret_attachments: Optional[Sequence[Tuple[str, bool]]] = None,
+) -> None:
+
+    # Inner secret part to be S/MIME protected
+    inner_secret = build_mime(
+        subject=subject,
+        from_addr=from_addr,
+        to_addrs=to_addrs,
+        text=secret_text,
+        attachments=secret_attachments,
+    )
+
+    # S/MIME protect inner part
+    smime_part = smime_protect(inner_secret, smime_conf)
+
+    #debug write out smime message as file
+    #with open("smime_part.txt", "w", encoding="utf-8") as f:
+    #    f.write(smime_part.as_string())
+
+
+
+    # Outer message with non-encrypted content
+    outer_msg = build_mime(
+        subject=subject,
+        from_addr=from_addr,
+        to_addrs=to_addrs,
+        text=open_text,
+        attachments=open_attachments,
+    )
+
+    #debug write out outer message as file
+    #with open("outer_message_part.txt", "w", encoding="utf-8") as f:
+    #    f.write(outer_msg.as_string())
+
+
+    # Attach S/MIME part (application/pkcs7-mime)
+    outer_msg.attach(smime_part)
+
+    # Send message as bytes
+    send_smtp_ssl(
+        smtp_conf=smtp_conf,
+        from_addr=from_addr,
+        to_addrs=to_addrs,
+        message_bytes=outer_msg.as_bytes(),
+    )
+
+
+
+def send_pure_smime_email(
+        smtp_conf: SMTPConfig,
+        smime_conf: SMimeConfig,
+        subject: str,
+        from_addr: str,
+        to_addrs: Sequence[str],
+        secret_text: str,
+        secret_attachments: Optional[Sequence[Tuple[str, bool]]] = None,
+) -> None:
+
+    # secret to be S/MIME protected
+    secret = build_mime(
+        subject=subject,
+        from_addr=from_addr,
+        to_addrs=to_addrs,
+        text=secret_text,
+        attachments=secret_attachments,
+    )
+
+    # S/MIME protect inner part
+    smime_part = smime_protect(secret, smime_conf)
+
+    #debug write out smime message as file
+    #with open("smime_part.txt", "w", encoding="utf-8") as f:
+    #    f.write(smime_part.as_string())
+
+    send_smtp_ssl(
+        smtp_conf=smtp_conf,
+        from_addr=from_addr,
+        to_addrs=to_addrs,
+        message_bytes=smime_part.as_bytes(),
+
+
+    )
+
+
+def send_multiple_encrypted_smime_email(
+        smtp_conf: SMTPConfig,
+        smime_conf: SMimeConfig,
+        subject: str,
+        from_addr: str,
+        to_addrs: Sequence[str],
+        secret_text: str,
+        secret_attachments: Optional[Sequence[Tuple[str, bool]]] = None,
+        count: int = 1,
+) -> None:
+
+    if count == 0:
+        return  # Terminate because no encryptions left to be done
+    else:
+
+            # secret part to be S/MIME protected
+            secret = build_mime(
+            subject=subject,
+            from_addr=from_addr,
+            to_addrs=to_addrs,
+            text=secret_text,
+            attachments=secret_attachments,
+            )
+
+            #debug write out mime message as file
+            with open("secret_mime.txt", "w", encoding="utf-8") as f:
+                f.write(secret.as_string())
+
+            # S/MIME protect
+            #smime_part = smime_protect(secret, smime_conf)
+    
+            # prepare for recursion: test smime_protect(smime_protect)
+            #smime_part = smime_protect (smime_protect(secret, smime_conf), smime_conf)
+
+            for i in range(count, 0, -1):
+                secret_encrypted = smime_protect(secret, smime_conf)
+                secret= "" #innitialize secret to be empty
+                secret = secret_encrypted
+	    
+            smime_part = secret_encrypted
+
+
+            #debug write out smime message as file
+            with open("smime_part.txt", "w", encoding="utf-8") as f:
+                f.write(smime_part.as_string())
+
+            send_smtp_ssl(
+            smtp_conf=smtp_conf,
+            from_addr=from_addr,
+            to_addrs=to_addrs,
+            message_bytes=smime_part.as_bytes(),
+
+
+    )
+
+#send triple wrapped smime mail according to RFC2634 section 1.1
+def send_triple_wrapped_pure_smime_email(
+        smtp_conf: SMTPConfig,
+        smime_conf: SMimeConfig,
+        subject: str,
+        from_addr: str,
+        to_addrs: Sequence[str],
+        secret_text: str,
+        secret_attachments: Optional[Sequence[Tuple[str, bool]]] = None,
+) -> None:
+
+    # secret to be S/MIME protected
+    secret = build_mime(
+        subject=subject,
+        from_addr=from_addr,
+        to_addrs=to_addrs,
+        text=secret_text,
+        attachments=secret_attachments,
+    )
+
+    # S/MIME protect inner part and sign again
+    smime_part = smime_protect_and_sign_again(secret, smime_conf)
+
+    #debug write out smime message as file
+    with open("smime_protect_and_sign_again.txt", "w", encoding="utf-8") as f:
+        f.write(smime_part.as_string())
+
+    send_smtp_ssl(
+        smtp_conf=smtp_conf,
+        from_addr=from_addr,
+        to_addrs=to_addrs,
+        message_bytes=smime_part.as_bytes(),
+
+
+    )
+
+
+
+# ----------------------------
+# Main
+# ----------------------------
+
+def main() -> None:
+    print("\n  S/MIME tester") 
+    print("-----------------")
+    
+    #load config from ini file
+    smtp_cfg, smime_cfg, from_addr, to_addrs = load_config()
+    
+    print("\n> loading config from:",CONFIG_PATH)
+    print("\n> configuration: \n")
+    print("SMTP host:", smtp_cfg.host)
+    print("SMTP port:", smtp_cfg.port)
+    print("From:", from_addr)
+    print("To:", to_addrs)
+    print("Use SSL:", smtp_cfg.use_ssl)
+    print("Use STARTTLS:", smtp_cfg.use_starttls)
+    if smime_cfg:
+        print("S/MIME cipher:", smime_cfg.cipher)
+
+    print("\n> sending mail\n")
+
+#email
+
+    # Open (non-encrypted) part: e.g., short explanation and marketing logo
+    open_body = (
+        "This part of the email is not encrypted.\n"
+        "open_body"
+    )
+
+    open_attachments = [
+        ("./attachments/logo.png", True),  # inline logo
+        ("./attachments/document.pdf", False),  # regular attachment
+    ]
+
+    # Secret S/MIME-protected content
+    secret_body = (
+        "This is confidential information. It is protected with S/MIME and "
+        "intended only for the listed recipients.\n"
+        "secret_body"
+    )
+
+    secret_attachments = [
+        ("./attachments/confidential-report.pdf", False),
+        ("./attachments/confidential-logo.png", True),
+    ]
+
+    if True:
+      print("sending mixed smime email")
+
+      send_mixed_smime_email(
+          smtp_conf=smtp_cfg,
+          smime_conf=smime_cfg,
+          subject="Confidential S/MIME message with mixed open content",
+          from_addr=from_addr,
+          to_addrs=to_addrs,
+          secret_text=secret_body,
+          open_text=open_body,
+          open_attachments=open_attachments,
+          secret_attachments=secret_attachments,
+      )
+
+    if False:
+      print("sending pure smime email")
+      send_pure_smime_email(
+           smtp_conf=smtp_cfg,
+           smime_conf=smime_cfg,
+           subject="Pure S/MIME message with content",
+           from_addr=from_addr,
+           to_addrs=to_addrs,
+           secret_text=secret_body,
+           secret_attachments=secret_attachments,
+       )
+       
+    if True:
+      print("sending triple wrapped smime email")
+      send_triple_wrapped_pure_smime_email(
+           smtp_conf=smtp_cfg,
+           smime_conf=smime_cfg,
+           subject="triple wrapped S/MIME message with content",
+           from_addr=from_addr,
+           to_addrs=to_addrs,
+           secret_text=secret_body,
+           secret_attachments=secret_attachments,
+       )       
+
+    if False:
+      rounds_for_encryption = 4  #5 worked
+      #problem: email gets bigger with every iteration ...
+      print("sending multiple encrypted pure smime email. Rounds: ",rounds_for_encryption)
+      send_multiple_encrypted_smime_email(
+           smtp_conf=smtp_cfg,
+           smime_conf=smime_cfg,
+           subject="Multiple times encrypted S/MIME message with content",
+           from_addr=from_addr,
+           to_addrs=to_addrs,
+           secret_text=secret_body,
+           secret_attachments=secret_attachments,
+	       count=rounds_for_encryption,
+     )
+
+
+if __name__ == "__main__":
+    main()
+
+#WARNING CREDENTIALS IN config.ini!
