@@ -69,7 +69,7 @@ class SMimeConfig:
     - cipher: 'AES128-CBC', 'AES192-CBC', or 'AES256-CBC'
     """
 
-    VALID_CIPHERS = ("tripledes_3key", "aes128_cbc", "aes256_cbc")  # python-smail ciphers
+    VALID_CIPHERS = ("tripledes_3key", "aes128_cbc", "aes192_cbc" , "aes256_cbc")  # python-smail ciphers
 
 
     def __init__(
@@ -737,7 +737,10 @@ def main() -> None:
     print("Use STARTTLS:", smtp_cfg.use_starttls)
     if smime_cfg:
         print("S/MIME cipher:", smime_cfg.cipher)
+        print("Signer certificate file:", smime_cfg.signer_cert)
+        print("Signer key file:", smime_cfg.signer_key)
 
+        print("\nRecipient cert files:", smime_cfg.recipient_certs)
     print("\n> sending mail\n")
 
 #email

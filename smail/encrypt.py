@@ -25,6 +25,7 @@ def _get_content_encryption_algorithm(alg):
     algs = {
         "tripledes_3key": TripleDes(alg, key_size=24),
         "aes128_cbc": AesCbc(alg, key_size=16),
+        "aes192_cbc": AesCbc(alg, key_size=24),
         "aes256_cbc": AesCbc(alg, key_size=32)
     }
     try:
