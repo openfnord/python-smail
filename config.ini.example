@@ -24,5 +24,8 @@ cipher = aes192_cbc
 #cipher = aes256_cbc
 #hash_alg = sha256
 hash_alg = sha512
+#
+sig_alg = rsa
+#sig_alg = pss
 
 
