@@ -70,6 +70,7 @@ class SMimeConfig:
     """
 
     VALID_CIPHERS = ("tripledes_3key", "aes128_cbc", "aes192_cbc" , "aes256_cbc")  # python-smail ciphers
+    VALID_HASH_ALGS = ("sha256", "sha512")  # python-smail hash digest algorithms
 
 
     def __init__(
@@ -78,19 +79,25 @@ class SMimeConfig:
             signer_cert: Optional[str] = None,
             signer_key: Optional[str] = None,
             cipher: str = "aes256_cbc",
+            hash_alg: str = "sha256",
     ) -> None:
         if not recipient_certs:
             raise ValueError("At least one recipient certificate is required for S/MIME encryption.")
 
-        cipher=cipher.lower()   #allow uppercase config values like AES256_CBC
+        cipher = cipher.lower()   #allow uppercase config values like AES256_CBC
+        hash_alg = hash_alg.lower()   #allow uppercase config values like SHA256
         if cipher not in self.VALID_CIPHERS:
             raise ValueError(f"Unsupported cipher '{cipher}'. Must be one of {self.VALID_CIPHERS}.")
+
+        if hash_alg not in self.VALID_HASH_ALGS:
+            raise ValueError(f"Unsupported hash algorithm '{hash_alg}'. Must be one of {self.VALID_HASH_ALGS}.")
+
 
         self.recipient_certs = list(recipient_certs)
         self.signer_cert = signer_cert
         self.signer_key = signer_key
         self.cipher = cipher
-
+        self.hash_alg = hash_alg
 
 
 
@@ -156,7 +163,9 @@ def load_config(path: Path = CONFIG_PATH) -> tuple[SMTPConfig, SMimeConfig | Non
         recipient_certs = _split_list(smime_sec.get("recipient_certs"))
         signer_cert = smime_sec.get("signer_cert")
         signer_key = smime_sec.get("signer_key")
-        cipher = smime_sec.get("cipher", "AES256-CBC")
+        cipher = smime_sec.get("cipher", "aes256_cbc")
+        hash_alg = smime_sec.get("hash_alg", "sha256")
+
 
     if recipient_certs:
         smime_cfg = SMimeConfig(
@@ -164,6 +173,7 @@ def load_config(path: Path = CONFIG_PATH) -> tuple[SMTPConfig, SMimeConfig | Non
         signer_cert=signer_cert,
         signer_key=signer_key,
         cipher=cipher,
+	hash_alg=hash_alg,
     )
 
     return smtp_cfg, smime_cfg, from_addr, to_addrs
@@ -307,7 +317,7 @@ def smime_protect(
             signer_key_bytes,
             signer_cert_bytes,
             recipient_certs_data,
-            "sha256", "rsa", True, "",
+            config.hash_alg, "rsa", True, "",
             config.cipher, "rsaes_pkcs1v15",
 	    
         )
@@ -420,7 +430,7 @@ def smime_protect_and_sign_again(
             signer_key_bytes,
             signer_cert_bytes,
             recipient_certs_data,
-            "sha256", "rsa", True, "",
+            config.hash_alg, "rsa", True, "",
             config.cipher, "rsaes_pkcs1v15",
         )
 	
@@ -468,7 +478,7 @@ def smime_protect_and_sign_again(
             smime_msg,
             signer_key_bytes,
             signer_cert_bytes,
-            "sha256", "rsa", True, "",
+            config.hash_alg, "rsa", True, "",
         )
         return smime_msg_signed
         
@@ -737,6 +747,7 @@ def main() -> None:
     print("Use STARTTLS:", smtp_cfg.use_starttls)
     if smime_cfg:
         print("S/MIME cipher:", smime_cfg.cipher)
+        print("S/MIME hash digest algorithm:", smime_cfg.hash_alg)
         print("Signer certificate file:", smime_cfg.signer_cert)
         print("Signer key file:", smime_cfg.signer_key)
 
@@ -807,7 +818,7 @@ def main() -> None:
            secret_attachments=secret_attachments,
        )       
 
-    if False:
+    if True:
       rounds_for_encryption = 4  #5 worked
       #problem: email gets bigger with every iteration ...
       print("sending multiple encrypted pure smime email. Rounds: ",rounds_for_encryption)

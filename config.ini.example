@@ -19,7 +19,10 @@ recipient_certs = /path/certs/alice.pem, /path/certs/bob.pem
 signer_cert = /path/certs/signer_cert.pem
 signer_key = /path/private/signer_key.pem
 #cipher = tripledes_3key
-cipher = aes256_cbc
-
+#cipher = aes128_cbc
+cipher = aes192_cbc
+#cipher = aes256_cbc
+#hash_alg = sha256
+hash_alg = sha512
 
 
