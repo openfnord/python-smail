@@ -33,6 +33,7 @@ from email.utils import formatdate, make_msgid
 from smail import encrypt_message, sign_and_encrypt_message, sign_message  # python-smail
 
 CONFIG_PATH = Path("config.ini") # path to your config containing credentials
+FILE_DUMP = True  # if true, email content is written out to debug files
 
 # ----------------------------
 # Configuration objects
@@ -394,41 +395,6 @@ def smime_protect_and_sign_again(
             signer_cert_bytes = f_cert.read()
             signer_key_bytes = f_key.read()
 
-    ## sign_and_encrypt_message(message, key_signer, cert_signer, [certs], cipher=...)
-    ## def sign_and_encrypt_message(message, key_signer, cert_signer, certs_recipients,
-    ##                         digest_alg="sha256", sig_alg="rsa",
-    ##                         attrs=True, prefix="",
-    ##                         content_enc_alg="aes256_cbc", key_enc_alg="rsaes_pkcs1v15"):
-    ## 
-    ## """Takes a message, signs and encrypts it and returns a new signed and encrypted message object.
-    ## 
-    ## Args:
-    ##     message (:obj:`email.message.Message`): The message object to sign and encrypt.
-    ##
-    ##    key_signer (`bytes`, `str` or :obj:`asn1crypto.keys.PrivateKeyInfo`): Private key used to
-    ##        sign the message. (A byte string of file contents, a unicode string filename or an
-    ##        asn1crypto.keys.PrivateKeyInfo object)
-    ##    cert_signer (`bytes`, `str` or :obj:`asn1crypto.x509.Certificate`): Certificate/Public Key
-    ##        (belonging to Private Key) that will be included in the signed message. (A byte string of file
-    ##        contents, a unicode string filename or an asn1crypto.x509.Certificate object)
-    ##    certs_recipients (:obj:`list` of `bytes`, `str` or :obj:`asn1crypto.x509.Certificate`): A
-    ##        list of byte string of file contents, a unicode string filename or an
-    ##        asn1crypto.x509.Certificate object for which the message should be encrypted.
-    ##    digest_alg (str): Digest (Hash) Algorithm - e.g. "sha256"
-    ##    sig_alg (str): Signature Algorithm
-    ##    attrs (bool): Whether to include signed attributes (signing time). Default
-    ##        to True
-    ##    prefix (str): Content type prefix (e.g. "x-"). Default to ""
-    ##    content_enc_alg (str): Content Encryption Algorithm - e.g. aes256_cbc
-    ##    key_enc_alg: Key Encryption Algorithm
-    ##
-    ##  Returns:
-    ##     :obj:`email.message.Message`: signed and encrypted message
-    ##
-    ##  Todo:
-    ##    payload not used anymore.. does this still work for MultiPart?!
-    ##
-    ## """
 
         smime_msg = sign_and_encrypt_message(
             inner_msg,
@@ -570,8 +536,9 @@ def send_mixed_smime_email(
     smime_part = smime_protect(inner_secret, smime_conf)
 
     #debug write out smime message as file
-    #with open("smime_part.txt", "w", encoding="utf-8") as f:
-    #    f.write(smime_part.as_string())
+    if FILE_DUMP: 
+        with open("smime_part.txt", "w", encoding="utf-8") as f:
+            f.write(smime_part.as_string())
 
 
 
@@ -585,8 +552,9 @@ def send_mixed_smime_email(
     )
 
     #debug write out outer message as file
-    #with open("outer_message_part.txt", "w", encoding="utf-8") as f:
-    #    f.write(outer_msg.as_string())
+    if FILE_DUMP: 
+        with open("outer_message_part.txt", "w", encoding="utf-8") as f:
+            f.write(outer_msg.as_string())
 
 
     # Attach S/MIME part (application/pkcs7-mime)
@@ -625,8 +593,9 @@ def send_pure_smime_email(
     smime_part = smime_protect(secret, smime_conf)
 
     #debug write out smime message as file
-    #with open("smime_part.txt", "w", encoding="utf-8") as f:
-    #    f.write(smime_part.as_string())
+    if FILE_DUMP: 
+        with open("smime_part.txt", "w", encoding="utf-8") as f:
+            f.write(smime_part.as_string())
 
     send_smtp_ssl(
         smtp_conf=smtp_conf,
@@ -663,26 +632,40 @@ def send_multiple_encrypted_smime_email(
             )
 
             #debug write out mime message as file
-            with open("secret_mime.txt", "w", encoding="utf-8") as f:
-                f.write(secret.as_string())
+            if FILE_DUMP:
+                with open("secret_mime_multiple.txt", "w", encoding="utf-8") as f:
+                    f.write(secret.as_string())
 
-            # S/MIME protect
-            #smime_part = smime_protect(secret, smime_conf)
-    
-            # prepare for recursion: test smime_protect(smime_protect)
-            #smime_part = smime_protect (smime_protect(secret, smime_conf), smime_conf)
+            # Load recipient certs
+            recipient_certs_data: List[bytes] = []
+            for cert_path in smime_conf.recipient_certs:
+                with open(cert_path, "rb") as f:
+                    recipient_certs_data.append(f.read())
 
+         
+
+            print("\nrounds size")
+            #multiple rounds of encryption
             for i in range(count, 0, -1):
-                secret_encrypted = smime_protect(secret, smime_conf)
-                secret= "" #innitialize secret to be empty
+               
+                secret_encrypted = encrypt_message(secret, recipient_certs_data, smime_conf.cipher, "rsaes_pkcs1v15", "")
+                message_size = len(secret_encrypted.as_string())
+		#next round
                 secret = secret_encrypted
-	    
+                print(i, message_size) # print step
+                if FILE_DUMP:
+                    secret_dump_filename = f"secret_mime_multiple{i}.txt"
+                    with open(secret_dump_filename, "w", encoding="utf-8") as f:
+                        f.write(secret.as_string())
+
+
             smime_part = secret_encrypted
 
 
             #debug write out smime message as file
-            with open("smime_part.txt", "w", encoding="utf-8") as f:
-                f.write(smime_part.as_string())
+            if FILE_DUMP: 
+                with open("smime_part_multiple.txt", "w", encoding="utf-8") as f:
+                    f.write(smime_part.as_string())
 
             send_smtp_ssl(
             smtp_conf=smtp_conf,
@@ -717,8 +700,9 @@ def send_triple_wrapped_pure_smime_email(
     smime_part = smime_protect_and_sign_again(secret, smime_conf)
 
     #debug write out smime message as file
-    with open("smime_protect_and_sign_again.txt", "w", encoding="utf-8") as f:
-        f.write(smime_part.as_string())
+    if FILE_DUMP:  
+        with open("smime_protect_and_sign_again.txt", "w", encoding="utf-8") as f:
+            f.write(smime_part.as_string())
 
     send_smtp_ssl(
         smtp_conf=smtp_conf,
@@ -760,7 +744,9 @@ def main() -> None:
         print("\nRecipient cert files:", smime_cfg.recipient_certs)
     print("\n> sending mail\n")
 
-#email
+    #--------------
+    #compose emails
+    #--------------
 
     # Open (non-encrypted) part: e.g., short explanation and marketing logo
     open_body = (
@@ -800,7 +786,7 @@ def main() -> None:
           secret_attachments=secret_attachments,
       )
 
-    if False:
+    if True:
       print("sending pure smime email")
       send_pure_smime_email(
            smtp_conf=smtp_cfg,
@@ -825,7 +811,7 @@ def main() -> None:
        )       
 
     if True:
-      rounds_for_encryption = 4  #5 worked
+      rounds_for_encryption = 7  #5 worked
       #problem: email gets bigger with every iteration ...
       print("sending multiple encrypted pure smime email. Rounds: ",rounds_for_encryption)
       send_multiple_encrypted_smime_email(
