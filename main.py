@@ -32,8 +32,13 @@ from email.utils import formatdate, make_msgid
 
 from smail import encrypt_message, sign_and_encrypt_message, sign_message  # python-smail
 
+#---------------
+# MAGIC VALUES
+#---------------
+
 CONFIG_PATH = Path("config.ini") # path to your config containing credentials
 FILE_DUMP = True  # if true, email content is written out to debug files
+MULTIPLE_CRYPT_ROUNDS = 5
 
 # ----------------------------
 # Configuration objects
@@ -809,15 +814,18 @@ def main() -> None:
            secret_text=secret_body,
            secret_attachments=secret_attachments,
        )       
-
+    
     if True:
-      rounds_for_encryption = 7  #5 worked
+      rounds_for_encryption = MULTIPLE_CRYPT_ROUNDS  #5 worked
       #problem: email gets bigger with every iteration ...
       print("sending multiple encrypted pure smime email. Rounds: ",rounds_for_encryption)
+      subject_str = f"{rounds_for_encryption} times encrypted S/MIME message with content"
+      
       send_multiple_encrypted_smime_email(
            smtp_conf=smtp_cfg,
            smime_conf=smime_cfg,
-           subject="Multiple times encrypted S/MIME message with content",
+           #subject="Multiple times encrypted S/MIME message with content",
+	   subject=subject_str,
            from_addr=from_addr,
            to_addrs=to_addrs,
            secret_text=secret_body,
