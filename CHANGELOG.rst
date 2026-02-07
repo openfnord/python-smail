@@ -9,6 +9,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ------------------
 - tbd
 
+0.10.1 (2026-02-07)
+-------------------
+- improved ramdom generator changed from os.urandom to util.rand_bytes of oscrypto
+- added support for aes192_cbc
 
 0.10.0 (2024-04-07)
 -------------------
