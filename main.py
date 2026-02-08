@@ -38,7 +38,18 @@ from smail import encrypt_message, sign_and_encrypt_message, sign_message  # pyt
 
 CONFIG_PATH = Path("config.ini") # path to your config containing credentials
 FILE_DUMP = True  # if true, email content is written out to debug files
-MULTIPLE_CRYPT_ROUNDS = 5
+
+#WHICH TEST MAILS ARE TO BE SENT?
+MULTIPLE_ENCRYPTED_SMIME = True
+MULTIPLE_SIGNED_ENCRYPTED_SMIME = True
+TRIPLE_WRAPPED_PURE_SMIME = True
+PURE_SMIME = True
+MIXED_SMIME_EMAIL = True
+
+MULTIPLE_CRYPT_ROUNDS = 25
+MULTIPLE_SIGN_CRYPT_ROUNDS = 12
+INCLUDE_ATTACHMENTS = False
+
 
 # ----------------------------
 # Configuration objects
@@ -165,6 +176,7 @@ def load_config(path: Path = CONFIG_PATH) -> tuple[SMTPConfig, SMimeConfig | Non
     email_sec = config["email"] if "email" in config else {}
     from_addr = email_sec.get("from_addr", "sender@example.com")
     to_addrs = _split_list(email_sec.get("to_addrs", "alice@example.com, bob@example.com"))
+    #TODO Attachments
 
     # --- S/MIME ---
     smime_cfg: SMimeConfig | None = None
@@ -653,6 +665,7 @@ def send_multiple_encrypted_smime_email(
             #multiple rounds of encryption
             for i in range(count, 0, -1):
                
+                #encrypt only
                 secret_encrypted = encrypt_message(secret, recipient_certs_data, smime_conf.cipher, "rsaes_pkcs1v15", "")
                 message_size = len(secret_encrypted.as_string())
 		#next round
@@ -677,9 +690,86 @@ def send_multiple_encrypted_smime_email(
             from_addr=from_addr,
             to_addrs=to_addrs,
             message_bytes=smime_part.as_bytes(),
-
-
     )
+
+
+
+def send_multiple_signed_encrypted_smime_email(
+        smtp_conf: SMTPConfig,
+        smime_conf: SMimeConfig,
+        subject: str,
+        from_addr: str,
+        to_addrs: Sequence[str],
+        secret_text: str,
+        secret_attachments: Optional[Sequence[Tuple[str, bool]]] = None,
+        count: int = 1,
+) -> None:
+
+    if count == 0:
+        return  # Terminate because no encryptions left to be done
+    else:
+
+            # secret part to be S/MIME protected
+            secret = build_mime(
+            subject=subject,
+            from_addr=from_addr,
+            to_addrs=to_addrs,
+            text=secret_text,
+            attachments=secret_attachments,
+            )
+
+            #debug write out mime message as file
+            if FILE_DUMP:
+                with open("secret_mime_multiple.txt", "w", encoding="utf-8") as f:
+                    f.write(secret.as_string())
+
+            # Load recipient certs
+            recipient_certs_data: List[bytes] = []
+            for cert_path in smime_conf.recipient_certs:
+                with open(cert_path, "rb") as f:
+                    recipient_certs_data.append(f.read())
+
+         
+
+            print("\nrounds size")
+            #multiple rounds of encryption
+            for i in range(count, 0, -1):
+               
+                #sign and encrypt
+                #secret_encrypted = smime_protect(secret, smime_conf)
+                secret_encrypted = sign_and_encrypt_message(secret, smime_conf.signer_key, smime_conf.signer_cert, 
+		             smime_conf.recipient_certs, 
+                             smime_conf.hash_alg, smime_conf.sig_alg,
+                             True, "",
+                             smime_conf.cipher, "rsaes_pkcs1v15")
+                
+                #encrypt only
+                #secret_encrypted = encrypt_message(secret, recipient_certs_data, smime_conf.cipher, "rsaes_pkcs1v15", "")
+                message_size = len(secret_encrypted.as_string())
+		#next round
+                secret = secret_encrypted
+                print(i, message_size) # print step
+                if FILE_DUMP:
+                    secret_dump_filename = f"secret_mime_multiple{i}.txt"
+                    with open(secret_dump_filename, "w", encoding="utf-8") as f:
+                        f.write(secret.as_string())
+
+
+            smime_part = secret_encrypted
+
+
+            #debug write out smime message as file
+            if FILE_DUMP: 
+                with open("smime_part_multiple.txt", "w", encoding="utf-8") as f:
+                    f.write(smime_part.as_string())
+
+            send_smtp_ssl(
+            smtp_conf=smtp_conf,
+            from_addr=from_addr,
+            to_addrs=to_addrs,
+            message_bytes=smime_part.as_bytes(),
+    )
+
 
 #send triple wrapped smime mail according to RFC2634 section 1.1
 def send_triple_wrapped_pure_smime_email(
@@ -756,28 +846,44 @@ def main() -> None:
     # Open (non-encrypted) part: e.g., short explanation and marketing logo
     open_body = (
         "This part of the email is not encrypted.\n"
-        "open_body"
+        + "OPEN_BODY\n"
+	+ "\nS/MIME CONFIGURATION:\n"
+        + "\nS/MIME cipher: " + str(smime_cfg.cipher)
+        + "\nS/MIME hash digest algorithm: " + str(smime_cfg.hash_alg)
+	+ "\nS/MIME signature algorithm: " + str(smime_cfg.sig_alg)
+	+ "\nSigner certificate file: " + str(smime_cfg.signer_cert)
     )
 
-    open_attachments = [
-        ("./attachments/logo.png", True),  # inline logo
-        ("./attachments/document.pdf", False),  # regular attachment
-    ]
+    if INCLUDE_ATTACHMENTS:
+        open_attachments = [
+            ("./attachments/logo.png", True),  # inline logo
+            ("./attachments/document.pdf", False),  # regular attachment
+        ]
+    else:
+        open_attachments = []
 
     # Secret S/MIME-protected content
     secret_body = (
         "This is confidential information. It is protected with S/MIME and "
         "intended only for the listed recipients.\n"
-        "secret_body"
+        + "\nSECRET_BODY\n"
+	+ "\nS/MIME CONFIGURATION:\n"
+        + "\nS/MIME cipher: " + str(smime_cfg.cipher)
+        + "\nS/MIME hash digest algorithm: " + str(smime_cfg.hash_alg)
+	+ "\nS/MIME signature algorithm: " + str(smime_cfg.sig_alg)
+	+ "\nSigner certificate file: " + str(smime_cfg.signer_cert)	
     )
 
-    secret_attachments = [
-        ("./attachments/confidential-report.pdf", False),
-        ("./attachments/confidential-logo.png", True),
-    ]
+    if INCLUDE_ATTACHMENTS:
+        secret_attachments = [
+            ("./attachments/confidential-report.pdf", False),
+            ("./attachments/confidential-logo.png", True),
+        ]
+    else:
+        secret_attachments = []
 
-    if True:
-      print("sending mixed smime email")
+    if MIXED_SMIME_EMAIL:
+      print("\nsending mixed smime email")
 
       send_mixed_smime_email(
           smtp_conf=smtp_cfg,
@@ -791,8 +897,8 @@ def main() -> None:
           secret_attachments=secret_attachments,
       )
 
-    if True:
-      print("sending pure smime email")
+    if PURE_SMIME:
+      print("\nsending pure smime email")
       send_pure_smime_email(
            smtp_conf=smtp_cfg,
            smime_conf=smime_cfg,
@@ -803,8 +909,8 @@ def main() -> None:
            secret_attachments=secret_attachments,
        )
        
-    if True:
-      print("sending triple wrapped smime email")
+    if TRIPLE_WRAPPED_PURE_SMIME:
+      print("\nsending triple wrapped smime email")
       send_triple_wrapped_pure_smime_email(
            smtp_conf=smtp_cfg,
            smime_conf=smime_cfg,
@@ -815,17 +921,16 @@ def main() -> None:
            secret_attachments=secret_attachments,
        )       
     
-    if True:
-      rounds_for_encryption = MULTIPLE_CRYPT_ROUNDS  #5 worked
+    if MULTIPLE_ENCRYPTED_SMIME:
+      rounds_for_encryption = MULTIPLE_CRYPT_ROUNDS 
       #problem: email gets bigger with every iteration ...
-      print("sending multiple encrypted pure smime email. Rounds: ",rounds_for_encryption)
+      print("\nsending multiple encrypted pure smime email. Rounds: ",rounds_for_encryption)
       subject_str = f"{rounds_for_encryption} times encrypted S/MIME message with content"
       
       send_multiple_encrypted_smime_email(
            smtp_conf=smtp_cfg,
            smime_conf=smime_cfg,
-           #subject="Multiple times encrypted S/MIME message with content",
-	   subject=subject_str,
+           subject=subject_str,
            from_addr=from_addr,
            to_addrs=to_addrs,
            secret_text=secret_body,
@@ -833,6 +938,22 @@ def main() -> None:
 	       count=rounds_for_encryption,
      )
 
+    if MULTIPLE_SIGNED_ENCRYPTED_SMIME:
+      rounds_for_encryption = MULTIPLE_SIGN_CRYPT_ROUNDS  
+      #problem: email gets bigger with every iteration ...
+      print("\nsending multiple signed and encrypted pure smime email. Rounds: ",rounds_for_encryption)
+      subject_str = f"{rounds_for_encryption} times signed and encrypted S/MIME message with content"
+      
+      send_multiple_signed_encrypted_smime_email(
+           smtp_conf=smtp_cfg,
+           smime_conf=smime_cfg,
+           subject=subject_str,
+           from_addr=from_addr,
+           to_addrs=to_addrs,
+           secret_text=secret_body,
+           secret_attachments=secret_attachments,
+	       count=rounds_for_encryption,
+     )
 
 if __name__ == "__main__":
     main()
