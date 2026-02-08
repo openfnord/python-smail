@@ -8,6 +8,7 @@ MIT License
 
 Copyright (c) 2018 Grzegorz Makarewicz
 Copyright (c) 2020 Robert Habermann
+Copyright (c) 2026 Ludwig Jaffe
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -129,6 +130,10 @@ def sign_bytes(data_unsigned, key_signer, cert_signer,
             })
         })
 
+    elif sig_alg == "ecdsa":
+        signer['signature_algorithm'] = algos.SignedDigestAlgorithm({'algorithm': 'ecdsa'})
+
+
     else:
         raise AttributeError("signature algorithm unsupported: {}".format(sig_alg))
 
@@ -179,6 +184,9 @@ def sign_bytes(data_unsigned, key_signer, cert_signer,
 
     elif sig_alg == "pss":
         signed_value_signature = asymmetric.rsa_pss_sign(key_signer, to_sign, pss_digest_alg)
+
+    elif sig_alg == "ecdsa":
+        signed_value_signature = asymmetric.ecdsa_sign(key_signer, to_sign, digest_alg.lower())
 
     else:
         raise AttributeError("signature algorithm unsupported: {}".format(sig_alg))
