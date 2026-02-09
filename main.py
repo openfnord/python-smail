@@ -37,18 +37,18 @@ from smail import encrypt_message, sign_and_encrypt_message, sign_message  # pyt
 #---------------
 
 CONFIG_PATH = Path("config.ini") # path to your config containing credentials
-FILE_DUMP = True  # if true, email content is written out to debug files
+FILE_DUMP = False  # if true, email content is written out to debug files
 
 #WHICH TEST MAILS ARE TO BE SENT?
-MULTIPLE_ENCRYPTED_SMIME = False
+MULTIPLE_ENCRYPTED_SMIME = True
 MULTIPLE_SIGNED_SMIME = True
-MULTIPLE_SIGNED_ENCRYPTED_SMIME = False
-TRIPLE_WRAPPED_PURE_SMIME = False
+MULTIPLE_SIGNED_ENCRYPTED_SMIME = True
+TRIPLE_WRAPPED_PURE_SMIME = True
 PURE_SMIME = False
 MIXED_SMIME_EMAIL = False
 
 MULTIPLE_CRYPT_ROUNDS = 25
-MULTIPLE_SIGN_ROUNDS = 25
+MULTIPLE_SIGN_ROUNDS = 26
 MULTIPLE_SIGN_CRYPT_ROUNDS = 12
 INCLUDE_ATTACHMENTS = False
 
@@ -468,7 +468,7 @@ def smime_protect_and_sign_again(
             smime_msg,
             signer_key_bytes,
             signer_cert_bytes,
-            config.hash_alg, config.sig_alg, True, "",
+            config.hash_alg, config.sig_alg, True, "", True, True
         )
         return smime_msg_signed
         
@@ -738,7 +738,7 @@ def send_multiple_signed_smime_email(
                 #sign only
                 secret_encrypted = sign_message(secret, smime_conf.signer_key, smime_conf.signer_cert, 
                              smime_conf.hash_alg, smime_conf.sig_alg,
-                             True, "")
+                             True, "", True, True)
                 
                 message_size = len(secret_encrypted.as_string())
 		#next round
@@ -924,6 +924,7 @@ def main() -> None:
         + "\nS/MIME hash digest algorithm: " + str(smime_cfg.hash_alg)
 	+ "\nS/MIME signature algorithm: " + str(smime_cfg.sig_alg)
 	+ "\nSigner certificate file: " + str(smime_cfg.signer_cert)
+    + "\nRecipient cert files: " + str(smime_cfg.recipient_certs)
     )
 
     if INCLUDE_ATTACHMENTS:
@@ -943,7 +944,8 @@ def main() -> None:
         + "\nS/MIME cipher: " + str(smime_cfg.cipher)
         + "\nS/MIME hash digest algorithm: " + str(smime_cfg.hash_alg)
 	+ "\nS/MIME signature algorithm: " + str(smime_cfg.sig_alg)
-	+ "\nSigner certificate file: " + str(smime_cfg.signer_cert)	
+	+ "\nSigner certificate file: " + str(smime_cfg.signer_cert)
+    + "\nRecipient cert files: " + str(smime_cfg.recipient_certs)
     )
 
     if INCLUDE_ATTACHMENTS:
