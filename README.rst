@@ -24,6 +24,8 @@ Tester for s/mime
 ------------------
 
 main.py is a tester for s/mime mail. Edit the config.ini with your mail server credentials and preferences and just run main.py to generate some fancy s/mime messages. For example a mixed message with encrypted and non-encrypted content.
+Note: Certificates should be PEM format with separate private key file. The private key file shall have no password.
+
 
 Example
 -------
