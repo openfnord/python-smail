@@ -38,6 +38,7 @@ from smail import encrypt_message, sign_and_encrypt_message, sign_message  # pyt
 
 CONFIG_PATH = Path("config.ini") # path to your config containing credentials
 FILE_DUMP = True  # if true, email content is written out to debug files
+SHOW_PROGRESS = False  # if true, rounds of email encryption or signing will be displayed
 
 #WHICH TEST MAILS ARE TO BE SENT?
 
@@ -599,7 +600,8 @@ def send_mixed_smime_email(
 
     # Attach S/MIME part (application/pkcs7-mime)
     outer_msg.attach(smime_part)
-
+    
+    print("message size:", len(outer_msg.as_string()))
     # Send message as bytes
     send_smtp_ssl(
         smtp_conf=smtp_conf,
@@ -637,6 +639,8 @@ def send_pure_smime_email(
         with open("complete_smime_of_pure_signed_and_encrypted_smime.txt", "w", encoding="utf-8") as f:
             f.write(smime_part.as_string())
 
+    print("message size:", len(smime_part.as_string()))
+    
     send_smtp_ssl(
         smtp_conf=smtp_conf,
         from_addr=from_addr,
@@ -688,16 +692,16 @@ def send_multiple_encrypted_smime_email(
 
          
 
-            print("\nrounds size")
+            if SHOW_PROGRESS: print("\nrounds size")
             #multiple rounds of encryption
             for i in range(count, 0, -1):
                
                 #encrypt only
                 secret_encrypted = encrypt_message(secret, recipient_certs_data, smime_conf.cipher, "rsaes_pkcs1v15", "")
                 message_size = len(secret_encrypted.as_string())
-		#next round
+	            #next round
                 secret = secret_encrypted
-                print(i, message_size) # print step
+                if SHOW_PROGRESS: print(i, message_size) # print step
                 if FILE_DUMP:
                     if count == 1:
                         secret_dump_filename = f"secret_of_single_encrypted_smime_round1.txt"
@@ -719,8 +723,7 @@ def send_multiple_encrypted_smime_email(
                 with open(secret_dump_filename, "w", encoding="utf-8") as f:
                     f.write(secret.as_string())
     
-
-
+            print("message size:", len(smime_part.as_string()))
             send_smtp_ssl(
             smtp_conf=smtp_conf,
             from_addr=from_addr,
@@ -772,7 +775,7 @@ def send_multiple_signed_smime_email(
 
          
 
-            print("\nrounds size")
+            if SHOW_PROGRESS: print("\nrounds size")
             #multiple rounds of signature
             for i in range(count, 0, -1):
                
@@ -784,7 +787,7 @@ def send_multiple_signed_smime_email(
                 message_size = len(secret_encrypted.as_string())
 		#next round
                 secret = secret_encrypted
-                print(i, message_size) # print step
+                if SHOW_PROGRESS: print(i, message_size) # print step
                 if FILE_DUMP:
                     if count == 1:
                         secret_dump_filename = f"secret_of_single_signed_smime_round1.txt"
@@ -805,7 +808,8 @@ def send_multiple_signed_smime_email(
                     secret_dump_filename = f"complete_smime_of_multiple_signed_smime.txt"
                 with open(secret_dump_filename, "w", encoding="utf-8") as f:
                     f.write(secret.as_string())
-
+                 
+            print("message size:", len(smime_part.as_string()))
 
             send_smtp_ssl(
             smtp_conf=smtp_conf,
@@ -858,7 +862,7 @@ def send_multiple_signed_encrypted_smime_email(
 
          
 
-            print("\nrounds size")
+            if SHOW_PROGRESS: print("\nrounds size")
             #multiple rounds of encryption
             for i in range(count, 0, -1):
                
@@ -873,7 +877,7 @@ def send_multiple_signed_encrypted_smime_email(
                 message_size = len(secret_encrypted.as_string())
 		#next round
                 secret = secret_encrypted
-                print(i, message_size) # print step
+                if SHOW_PROGRESS: print(i, message_size) # print step
                 if FILE_DUMP:
                     if count == 1:
                         secret_dump_filename = f"secret_of_single_signed_and_encrypted_smime_round1.txt"
@@ -895,8 +899,9 @@ def send_multiple_signed_encrypted_smime_email(
                     secret_dump_filename = f"complete_smime_of_multiple_signed_and_encrypted.txt"
                 with open(secret_dump_filename, "w", encoding="utf-8") as f:
                         f.write(secret.as_string())
-
-
+            
+            print("message size:", len(smime_part.as_string()))
+	    
             send_smtp_ssl(
             smtp_conf=smtp_conf,
             from_addr=from_addr,
@@ -949,7 +954,7 @@ def send_multiple_triple_wrapped_pure_smime_email(
 
          
 
-            print("\nrounds size")
+            if SHOW_PROGRESS: print("\nrounds size")
             #multiple rounds of encryption
             for i in range(count, 0, -1):
                
@@ -959,7 +964,7 @@ def send_multiple_triple_wrapped_pure_smime_email(
                 message_size = len(secret_encrypted.as_string())
 		#next round
                 secret = secret_encrypted
-                print(i, message_size) # print step
+                if SHOW_PROGRESS: print(i, message_size) # print step
                 if FILE_DUMP:
 
                     if count == 1:
@@ -983,7 +988,7 @@ def send_multiple_triple_wrapped_pure_smime_email(
                         f.write(secret.as_string())
 
 
-
+            print("message size:", message_size)
 
             send_smtp_ssl(
             smtp_conf=smtp_conf,
@@ -1021,6 +1026,9 @@ def send_triple_wrapped_pure_smime_email(
         with open("complete_smime_of_pure_triple_wrapped_smime.txt", "w", encoding="utf-8") as f:
             f.write(smime_part.as_string())
 
+    print("message size:", len(smime_part.as_string()))
+	    
+    
     send_smtp_ssl(
         smtp_conf=smtp_conf,
         from_addr=from_addr,
@@ -1172,7 +1180,7 @@ def main() -> None:
 
     if SINGLE_TRIPLE_WRAPPED_SMIME:
       #problem: email gets bigger with every iteration ...
-      print("\nsending multiple triple wrapped pure smime email. Rounds: ",rounds_for_encryption)
+      print("\nsending single triple wrapped pure smime email. Rounds: ",rounds_for_encryption)
       subject_str = f"{rounds_for_encryption} times triple wrapped S/MIME message with content"
       
       send_multiple_triple_wrapped_pure_smime_email(
