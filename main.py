@@ -64,13 +64,13 @@ PURE_SMIME = True
 MIXED_SMIME_EMAIL = True
 
 #rounds for multiple
-MULTIPLE_CRYPT_ROUNDS = 25
-MULTIPLE_SIGN_ROUNDS = 26
-MULTIPLE_SIGN_CRYPT_ROUNDS = 12
-MULTIPLE_TRIPLE_WRAPPED_ROUNDS =12
+MULTIPLE_CRYPT_ROUNDS = 4    #25 w/o attachments
+MULTIPLE_SIGN_ROUNDS = 4  #26 w/o attachments
+MULTIPLE_SIGN_CRYPT_ROUNDS = 2  #12 w/o attachments
+MULTIPLE_TRIPLE_WRAPPED_ROUNDS =4  #12 w/o attachments
 
 
-INCLUDE_ATTACHMENTS = False
+INCLUDE_ATTACHMENTS = True
 
 
 # ----------------------------
@@ -573,7 +573,7 @@ def send_mixed_smime_email(
         attachments=secret_attachments,
     )
 
-    # S/MIME protect inner part
+    # S/MIME protect inner part - sign and encrypt
     smime_part = smime_protect(inner_secret, smime_conf)
 
     #debug write out smime message as file
@@ -601,6 +601,11 @@ def send_mixed_smime_email(
     # Attach S/MIME part (application/pkcs7-mime)
     outer_msg.attach(smime_part)
     
+    #debug write out smime message as file
+    if FILE_DUMP: 
+        with open("complete_smime_of_mixed_signed_and_encrypted_smime.txt", "w", encoding="utf-8") as f:
+            f.write(outer_msg.as_string())
+
     print("message size:", len(outer_msg.as_string()))
     # Send message as bytes
     send_smtp_ssl(
