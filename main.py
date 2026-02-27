@@ -14,6 +14,7 @@ Tester for sending different styles email using python-smail with:
 
 Requires:
     pip install python-smail
+    !use the enclosed library to get the improvements I have done!
 """
 
 import os
@@ -42,31 +43,31 @@ SHOW_PROGRESS = False  # if true, rounds of email encryption or signing will be 
 
 #WHICH TEST MAILS ARE TO BE SENT?
 
-SINGLE_ENCRYPTED_SMIME = True
-MULTIPLE_ENCRYPTED_SMIME = True
+SINGLE_ENCRYPTED_SMIME = True		#Type 3
+MULTIPLE_ENCRYPTED_SMIME = True		#Type 4
 
-SINGLE_SIGNED_SMIME = True
-MULTIPLE_SIGNED_SMIME = True
+SINGLE_SIGNED_SMIME = True		#Type 5
+MULTIPLE_SIGNED_SMIME = True		#Type 6
 
-SINGLE_SIGNED_ENCRYPTED_SMIME = True
-MULTIPLE_SIGNED_ENCRYPTED_SMIME = True
+SINGLE_SIGNED_ENCRYPTED_SMIME = True	#Type 7
+MULTIPLE_SIGNED_ENCRYPTED_SMIME = True	#Type 8
 
 #signed and encrypted and signed again
-TRIPLE_WRAPPED_PURE_SMIME = True
-SINGLE_TRIPLE_WRAPPED_SMIME = True
-MULTIPLE_TRIPLE_WRAPPED_SMIME = True
+TRIPLE_WRAPPED_PURE_SMIME = True	#Type 11
+SINGLE_TRIPLE_WRAPPED_SMIME = True	#Type 9
+MULTIPLE_TRIPLE_WRAPPED_SMIME = True	#Type 10
 
 
 #single signed and encrypted
-PURE_SMIME = True
+PURE_SMIME = True			#Type 2
 
 #single mixed signed and encrypted mail with unencrypted part
-MIXED_SMIME_EMAIL = True
+MIXED_SMIME_EMAIL = True		#Type 1
 
 #rounds for multiple
 MULTIPLE_CRYPT_ROUNDS = 4    #25 w/o attachments
 MULTIPLE_SIGN_ROUNDS = 4  #26 w/o attachments
-MULTIPLE_SIGN_CRYPT_ROUNDS = 2  #12 w/o attachments
+MULTIPLE_SIGN_CRYPT_ROUNDS = 3  #12 w/o attachments
 MULTIPLE_TRIPLE_WRAPPED_ROUNDS =4  #12 w/o attachments
 
 
@@ -551,6 +552,7 @@ def send_smtp_ssl(
 # High-level Functions
 # ----------------------------
 
+##message Type1
 #send smime mail with open part
 def send_mixed_smime_email(
         smtp_conf: SMTPConfig,
@@ -578,7 +580,7 @@ def send_mixed_smime_email(
 
     #debug write out smime message as file
     if FILE_DUMP: 
-        with open("mixed_mail_signed_encrypted_smime_part.txt", "w", encoding="utf-8") as f:
+        with open("Type1_mixed_mail_signed_encrypted_smime_part.txt", "w", encoding="utf-8") as f:
             f.write(smime_part.as_string())
 
 
@@ -594,7 +596,7 @@ def send_mixed_smime_email(
 
     #debug write out outer message as file
     if FILE_DUMP: 
-        with open("mixed_mail_open_message_part.txt", "w", encoding="utf-8") as f:
+        with open("Type1_mixed_mail_open_message_part.txt", "w", encoding="utf-8") as f:
             f.write(outer_msg.as_string())
 
 
@@ -603,7 +605,7 @@ def send_mixed_smime_email(
     
     #debug write out smime message as file
     if FILE_DUMP: 
-        with open("complete_smime_of_mixed_signed_and_encrypted_smime.txt", "w", encoding="utf-8") as f:
+        with open("Type1_complete_smime_of_mixed_signed_and_encrypted_smime.txt", "w", encoding="utf-8") as f:
             f.write(outer_msg.as_string())
 
     print("message size:", len(outer_msg.as_string()))
@@ -615,7 +617,7 @@ def send_mixed_smime_email(
         message_bytes=outer_msg.as_bytes(),
     )
 
-
+##message Type2
 #send signed and encrypted smime_mail
 def send_pure_smime_email(
         smtp_conf: SMTPConfig,
@@ -641,7 +643,7 @@ def send_pure_smime_email(
 
     #debug write out smime message as file
     if FILE_DUMP: 
-        with open("complete_smime_of_pure_signed_and_encrypted_smime.txt", "w", encoding="utf-8") as f:
+        with open("Type2_complete_smime_of_pure_signed_and_encrypted_smime.txt", "w", encoding="utf-8") as f:
             f.write(smime_part.as_string())
 
     print("message size:", len(smime_part.as_string()))
@@ -654,7 +656,7 @@ def send_pure_smime_email(
 	
     )
 
-
+##message Type3 (single), Type 4 (multiple)
 def send_multiple_encrypted_smime_email(
         smtp_conf: SMTPConfig,
         smime_conf: SMimeConfig,
@@ -682,9 +684,9 @@ def send_multiple_encrypted_smime_email(
             #debug write out mime message as file
             if FILE_DUMP:
                 if count == 1:
-                    secret_dump_filename = f"secret_of_single_encrypted_smime.txt"
+                    secret_dump_filename = f"Type3_secret_of_single_encrypted_smime.txt"
                 else: 
-                    secret_dump_filename = f"secret_of_multiple_encrypted_smime.txt"
+                    secret_dump_filename = f"Type4_secret_of_multiple_encrypted_smime.txt"
                 with open(secret_dump_filename, "w", encoding="utf-8") as f:
                         f.write(secret.as_string())
     
@@ -709,9 +711,9 @@ def send_multiple_encrypted_smime_email(
                 if SHOW_PROGRESS: print(i, message_size) # print step
                 if FILE_DUMP:
                     if count == 1:
-                        secret_dump_filename = f"secret_of_single_encrypted_smime_round1.txt"
+                        secret_dump_filename = f"Type3_secret_of_single_encrypted_smime_round1.txt"
                     else: 
-                        secret_dump_filename = f"secret_of_multiple{i}_encrypted_smime.txt"
+                        secret_dump_filename = f"Type4_secret_of_multiple{i}_encrypted_smime.txt"
                     with open(secret_dump_filename, "w", encoding="utf-8") as f:
                         f.write(secret.as_string())
 
@@ -722,9 +724,9 @@ def send_multiple_encrypted_smime_email(
             #debug write out smime message as file
             if FILE_DUMP: 
                 if count == 1:
-                    secret_dump_filename = f"complete_smime_of_single_encrypted_smime.txt"
+                    secret_dump_filename = f"Type3_complete_smime_of_single_encrypted_smime.txt"
                 else: 
-                    secret_dump_filename = f"complete_smime_of_multiple_encrypted_smime.txt"
+                    secret_dump_filename = f"Type4_complete_smime_of_multiple_encrypted_smime.txt"
                 with open(secret_dump_filename, "w", encoding="utf-8") as f:
                     f.write(secret.as_string())
     
@@ -737,6 +739,7 @@ def send_multiple_encrypted_smime_email(
     )
     
 
+##message Type5 (single), Type 6 (multiple)
 def send_multiple_signed_smime_email(
         smtp_conf: SMTPConfig,
         smime_conf: SMimeConfig,
@@ -764,9 +767,9 @@ def send_multiple_signed_smime_email(
             #debug write out mime message as file
             if FILE_DUMP:
                 if count == 1:
-                    secret_dump_filename = f"secret_of_single_signed_smime.txt"
+                    secret_dump_filename = f"Type5_secret_of_single_signed_smime.txt"
                 else: 
-                    secret_dump_filename = f"secret_of_multiple_signed_smime.txt"
+                    secret_dump_filename = f"Type6_secret_of_multiple_signed_smime.txt"
                 with open(secret_dump_filename, "w", encoding="utf-8") as f:
                         f.write(secret.as_string())
     
@@ -795,9 +798,9 @@ def send_multiple_signed_smime_email(
                 if SHOW_PROGRESS: print(i, message_size) # print step
                 if FILE_DUMP:
                     if count == 1:
-                        secret_dump_filename = f"secret_of_single_signed_smime_round1.txt"
+                        secret_dump_filename = f"Type5_secret_of_single_signed_smime_round1.txt"
                     else: 
-                        secret_dump_filename = f"secret_of_multiple{i}_signed_smime.txt"
+                        secret_dump_filename = f"Type6_secret_of_multiple{i}_signed_smime.txt"
                     with open(secret_dump_filename, "w", encoding="utf-8") as f:
                         f.write(secret.as_string())
 			
@@ -808,9 +811,9 @@ def send_multiple_signed_smime_email(
             #debug write out smime message as file
             if FILE_DUMP: 
                 if count == 1:
-                    secret_dump_filename = f"complete_smime_of_single_signed_smime.txt"
+                    secret_dump_filename = f"Type5_complete_smime_of_single_signed_smime.txt"
                 else: 
-                    secret_dump_filename = f"complete_smime_of_multiple_signed_smime.txt"
+                    secret_dump_filename = f"Type6_complete_smime_of_multiple_signed_smime.txt"
                 with open(secret_dump_filename, "w", encoding="utf-8") as f:
                     f.write(secret.as_string())
                  
@@ -824,6 +827,7 @@ def send_multiple_signed_smime_email(
     )
 
 
+##message Type7 (single), Type 8 (multiple)
 def send_multiple_signed_encrypted_smime_email(
         smtp_conf: SMTPConfig,
         smime_conf: SMimeConfig,
@@ -852,9 +856,9 @@ def send_multiple_signed_encrypted_smime_email(
             if FILE_DUMP:
 
                 if count == 1:
-                    secret_dump_filename = f"secret_of_single_signed_and_encrypted_smime.txt"
+                    secret_dump_filename = f"Type7_secret_of_single_signed_and_encrypted_smime.txt"
                 else: 
-                    secret_dump_filename = f"secret_of_multiple_signed_and_encrypted_smime.txt"
+                    secret_dump_filename = f"Type8_secret_of_multiple_signed_and_encrypted_smime.txt"
                 with open(secret_dump_filename, "w", encoding="utf-8") as f:
                         f.write(secret.as_string())
     
@@ -885,9 +889,9 @@ def send_multiple_signed_encrypted_smime_email(
                 if SHOW_PROGRESS: print(i, message_size) # print step
                 if FILE_DUMP:
                     if count == 1:
-                        secret_dump_filename = f"secret_of_single_signed_and_encrypted_smime_round1.txt"
+                        secret_dump_filename = f"Type7_secret_of_single_signed_and_encrypted_smime_round1.txt"
                     else: 
-                        secret_dump_filename = f"secret_of_multiple{i}_signed_and_encrypted_smime.txt"
+                        secret_dump_filename = f"Type8_secret_of_multiple{i}_signed_and_encrypted_smime.txt"
                     with open(secret_dump_filename, "w", encoding="utf-8") as f:
                         f.write(secret.as_string())
 			
@@ -899,9 +903,9 @@ def send_multiple_signed_encrypted_smime_email(
             #debug write out smime message as file
             if FILE_DUMP: 
                 if count == 1:
-                    secret_dump_filename = f"complete_smime_of_single_signed_and_encrypted.txt"
+                    secret_dump_filename = f"Type7_complete_smime_of_single_signed_and_encrypted.txt"
                 else: 
-                    secret_dump_filename = f"complete_smime_of_multiple_signed_and_encrypted.txt"
+                    secret_dump_filename = f"Type8_complete_smime_of_multiple_signed_and_encrypted.txt"
                 with open(secret_dump_filename, "w", encoding="utf-8") as f:
                         f.write(secret.as_string())
             
@@ -915,6 +919,7 @@ def send_multiple_signed_encrypted_smime_email(
     )
 
 
+##message Type9 (single), Type 10 (multiple)
 #send (multiple) triple wrapped smime mail according to RFC2634 section 1.1
 def send_multiple_triple_wrapped_pure_smime_email(
         smtp_conf: SMTPConfig,
@@ -944,9 +949,9 @@ def send_multiple_triple_wrapped_pure_smime_email(
             if FILE_DUMP:
 
                 if count == 1:
-                    secret_dump_filename = f"secret_of_single_triple_wrapped_smime.txt"
+                    secret_dump_filename = f"Type9_secret_of_single_triple_wrapped_smime.txt"
                 else: 
-                    secret_dump_filename = f"secret_of_multiple_triple_wrapped_smime.txt"
+                    secret_dump_filename = f"Type10_secret_of_multiple_triple_wrapped_smime.txt"
                 with open(secret_dump_filename, "w", encoding="utf-8") as f:
                         f.write(secret.as_string())
 
@@ -973,9 +978,9 @@ def send_multiple_triple_wrapped_pure_smime_email(
                 if FILE_DUMP:
 
                     if count == 1:
-                        secret_dump_filename = f"secret_of_single_triple_wrapped_smime_round1.txt"
+                        secret_dump_filename = f"Type9_secret_of_single_triple_wrapped_smime_round1.txt"
                     else: 
-                        secret_dump_filename = f"secret_of_multiple{i}_triple_wrapped_smime.txt"
+                        secret_dump_filename = f"Type10_secret_of_multiple{i}_triple_wrapped_smime.txt"
                     with open(secret_dump_filename, "w", encoding="utf-8") as f:
                         f.write(secret.as_string())
 
@@ -986,9 +991,9 @@ def send_multiple_triple_wrapped_pure_smime_email(
             #debug write out smime message as file
             if FILE_DUMP: 
                 if count == 1:
-                    secret_dump_filename = f"complete_smime_of_single_triple_wrapped.txt"
+                    secret_dump_filename = f"Type9_complete_smime_of_single_triple_wrapped.txt"
                 else: 
-                    secret_dump_filename = f"complete_smime_of_multiple_triple_wrapped.txt"
+                    secret_dump_filename = f"Type10_complete_smime_of_multiple_triple_wrapped.txt"
                 with open(secret_dump_filename, "w", encoding="utf-8") as f:
                         f.write(secret.as_string())
 
@@ -1002,7 +1007,7 @@ def send_multiple_triple_wrapped_pure_smime_email(
             message_bytes=smime_part.as_bytes(),
     )
 
-
+##message Type11 equals Type 9
 #send triple wrapped smime mail according to RFC2634 section 1.1
 def send_triple_wrapped_pure_smime_email(
         smtp_conf: SMTPConfig,
@@ -1028,7 +1033,7 @@ def send_triple_wrapped_pure_smime_email(
 
     #debug write out smime message as file
     if FILE_DUMP:  
-        with open("complete_smime_of_pure_triple_wrapped_smime.txt", "w", encoding="utf-8") as f:
+        with open("Type11_complete_smime_of_pure_triple_wrapped_smime.txt", "w", encoding="utf-8") as f:
             f.write(smime_part.as_string())
 
     print("message size:", len(smime_part.as_string()))
@@ -1125,12 +1130,12 @@ def main() -> None:
     #-------------------
 
     if MIXED_SMIME_EMAIL:
-      print("\nsending mixed smime email")
+      print("\nType 1: sending mixed smime email")
 
       send_mixed_smime_email(
           smtp_conf=smtp_cfg,
           smime_conf=smime_cfg,
-          subject="Confidential S/MIME message with mixed open content",
+          subject="Type 1: Confidential S/MIME message with mixed open content",
           from_addr=from_addr,
           to_addrs=to_addrs,
           secret_text=secret_body,
@@ -1141,11 +1146,11 @@ def main() -> None:
 
 
     if PURE_SMIME:
-      print("\nsending pure smime email")
+      print("\nType 2: sending pure smime email")
       send_pure_smime_email(
            smtp_conf=smtp_cfg,
            smime_conf=smime_cfg,
-           subject="Pure S/MIME message with content",
+           subject="Type 2: Pure S/MIME message with content",
            from_addr=from_addr,
            to_addrs=to_addrs,
            secret_text=secret_body,
@@ -1154,11 +1159,11 @@ def main() -> None:
 
        
     if TRIPLE_WRAPPED_PURE_SMIME:
-      print("\nsending triple wrapped smime email")
+      print("\nType11: sending triple wrapped smime email")
       send_triple_wrapped_pure_smime_email(
            smtp_conf=smtp_cfg,
            smime_conf=smime_cfg,
-           subject="triple wrapped S/MIME message with content",
+           subject="Type 11: triple wrapped S/MIME message with content",
            from_addr=from_addr,
            to_addrs=to_addrs,
            secret_text=secret_body,
@@ -1169,8 +1174,8 @@ def main() -> None:
     if MULTIPLE_TRIPLE_WRAPPED_SMIME:
       rounds_for_encryption = MULTIPLE_TRIPLE_WRAPPED_ROUNDS  
       #problem: email gets bigger with every iteration ...
-      print("\nsending multiple triple wrapped pure smime email. Rounds: ",rounds_for_encryption)
-      subject_str = f"{rounds_for_encryption} times triple wrapped S/MIME message with content"
+      print("\nType 10: sending multiple triple wrapped pure smime email. Rounds: ",rounds_for_encryption)
+      subject_str = f"Type 10: {rounds_for_encryption} times triple wrapped S/MIME message with content"
       
       send_multiple_triple_wrapped_pure_smime_email(
            smtp_conf=smtp_cfg,
@@ -1185,8 +1190,8 @@ def main() -> None:
 
     if SINGLE_TRIPLE_WRAPPED_SMIME:
       #problem: email gets bigger with every iteration ...
-      print("\nsending single triple wrapped pure smime email. Rounds: ",rounds_for_encryption)
-      subject_str = f"{rounds_for_encryption} times triple wrapped S/MIME message with content"
+      print("\nType 9: sending single triple wrapped pure smime email. Rounds: ",rounds_for_encryption)
+      subject_str = f"Type 9: single times triple wrapped S/MIME message with content"
       
       send_multiple_triple_wrapped_pure_smime_email(
            smtp_conf=smtp_cfg,
@@ -1202,8 +1207,8 @@ def main() -> None:
     if MULTIPLE_ENCRYPTED_SMIME:
       rounds_for_encryption = MULTIPLE_CRYPT_ROUNDS 
       #problem: email gets bigger with every iteration ...
-      print("\nsending multiple encrypted pure smime email. Rounds: ",rounds_for_encryption)
-      subject_str = f"{rounds_for_encryption} times encrypted S/MIME message with content"
+      print("\nType 4: sending multiple encrypted pure smime email. Rounds: ",rounds_for_encryption)
+      subject_str = f"Type 4: {rounds_for_encryption} times encrypted S/MIME message with content"
       
       send_multiple_encrypted_smime_email(
            smtp_conf=smtp_cfg,
@@ -1219,8 +1224,8 @@ def main() -> None:
      
     if SINGLE_ENCRYPTED_SMIME: 
       #problem: email gets bigger with every iteration ...
-      print("\nsending single encrypted pure smime email.")
-      subject_str = "encrypted S/MIME message with content"
+      print("\nType 3: sending single encrypted pure smime email.")
+      subject_str = "Type 3: encrypted S/MIME message with content"
       
       send_multiple_encrypted_smime_email(
            smtp_conf=smtp_cfg,
@@ -1237,8 +1242,8 @@ def main() -> None:
     if MULTIPLE_SIGNED_SMIME:
       rounds_for_encryption = MULTIPLE_SIGN_ROUNDS  
       #problem: email gets bigger with every iteration ...
-      print("\nsending multiple signed pure smime email. Rounds: ",rounds_for_encryption)
-      subject_str = f"{rounds_for_encryption} times signed S/MIME message with content"
+      print("\nType 6: sending multiple signed pure smime email. Rounds: ",rounds_for_encryption)
+      subject_str = f"Type 6: {rounds_for_encryption} times signed S/MIME message with content"
       
       send_multiple_signed_smime_email(
            smtp_conf=smtp_cfg,
@@ -1253,8 +1258,8 @@ def main() -> None:
 
 
     if SINGLE_SIGNED_SMIME:
-      print("\nsending single signed pure smime email.")
-      subject_str = "signed S/MIME message with content"
+      print("\nType 5: sending single signed pure smime email.")
+      subject_str = "Type 5: signed S/MIME message with content"
       
       send_multiple_signed_smime_email(
            smtp_conf=smtp_cfg,
@@ -1271,8 +1276,8 @@ def main() -> None:
     if MULTIPLE_SIGNED_ENCRYPTED_SMIME:
       rounds_for_encryption = MULTIPLE_SIGN_CRYPT_ROUNDS  
       #problem: email gets bigger with every iteration ...
-      print("\nsending multiple signed and encrypted pure smime email. Rounds: ",rounds_for_encryption)
-      subject_str = f"{rounds_for_encryption} times signed and encrypted S/MIME message with content"
+      print("\nType 8: sending multiple signed and encrypted pure smime email. Rounds: ",rounds_for_encryption)
+      subject_str = f"Type 8: {rounds_for_encryption} times signed and encrypted S/MIME message with content"
       
       send_multiple_signed_encrypted_smime_email(
            smtp_conf=smtp_cfg,
@@ -1288,8 +1293,8 @@ def main() -> None:
 
     if SINGLE_SIGNED_ENCRYPTED_SMIME:
       rounds_for_encryption = MULTIPLE_SIGN_CRYPT_ROUNDS  
-      print("\nsending signed and encrypted pure smime email.")
-      subject_str = "signed and encrypted S/MIME message with content"
+      print("\nType 7: sending single signed and encrypted pure smime email.")
+      subject_str = "Type 7: single signed and encrypted S/MIME message with content"
       
       send_multiple_signed_encrypted_smime_email(
            smtp_conf=smtp_cfg,
