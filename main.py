@@ -1077,6 +1077,10 @@ def main() -> None:
 
         print("\nRecipient cert files:", smime_cfg.recipient_certs)
     print("\n> sending mail\n")
+    if INCLUDE_ATTACHMENTS:
+        print("\nwith attachments")
+    else:
+        print("\nwithout attachments")
 
     #--------------
     #compose emails
