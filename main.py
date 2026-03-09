@@ -53,13 +53,13 @@ SINGLE_SIGNED_ENCRYPTED_SMIME = True	#Type 7
 MULTIPLE_SIGNED_ENCRYPTED_SMIME = True	#Type 8
 
 #signed and encrypted and signed again
-TRIPLE_WRAPPED_PURE_SMIME = True	#Type 11
+TRIPLE_WRAPPED_PURE_SMIME = False	#Type 11 obsolete! -equals Type 9
 SINGLE_TRIPLE_WRAPPED_SMIME = True	#Type 9
 MULTIPLE_TRIPLE_WRAPPED_SMIME = True	#Type 10
 
 
-#single signed and encrypted
-PURE_SMIME = True			#Type 2
+#single signed and encrypted // obsolete equals Type7
+PURE_SMIME = False			#Type 2 obsolete! -equals Type 7
 
 #single mixed signed and encrypted mail with unencrypted part
 MIXED_SMIME_EMAIL = True		#Type 1
@@ -1149,6 +1149,7 @@ def main() -> None:
       )
 
 
+    #obsolete
     if PURE_SMIME:
       print("\nType 2: sending pure smime email")
       send_pure_smime_email(
@@ -1161,70 +1162,7 @@ def main() -> None:
            secret_attachments=secret_attachments,
        )
 
-       
-    if TRIPLE_WRAPPED_PURE_SMIME:
-      print("\nType11: sending triple wrapped smime email")
-      send_triple_wrapped_pure_smime_email(
-           smtp_conf=smtp_cfg,
-           smime_conf=smime_cfg,
-           subject="Type 11: triple wrapped S/MIME message with content",
-           from_addr=from_addr,
-           to_addrs=to_addrs,
-           secret_text=secret_body,
-           secret_attachments=secret_attachments,
-       )       
-       
-       
-    if MULTIPLE_TRIPLE_WRAPPED_SMIME:
-      rounds_for_encryption = MULTIPLE_TRIPLE_WRAPPED_ROUNDS  
-      #problem: email gets bigger with every iteration ...
-      print("\nType 10: sending multiple triple wrapped pure smime email. Rounds: ",rounds_for_encryption)
-      subject_str = f"Type 10: {rounds_for_encryption} times triple wrapped S/MIME message with content"
-      
-      send_multiple_triple_wrapped_pure_smime_email(
-           smtp_conf=smtp_cfg,
-           smime_conf=smime_cfg,
-           subject=subject_str,
-           from_addr=from_addr,
-           to_addrs=to_addrs,
-           secret_text=secret_body,
-           secret_attachments=secret_attachments,
-	       count=rounds_for_encryption,
-     )
-
-    if SINGLE_TRIPLE_WRAPPED_SMIME:
-      #problem: email gets bigger with every iteration ...
-      print("\nType 9: sending single triple wrapped pure smime email. Rounds: ",rounds_for_encryption)
-      subject_str = f"Type 9: single times triple wrapped S/MIME message with content"
-      
-      send_multiple_triple_wrapped_pure_smime_email(
-           smtp_conf=smtp_cfg,
-           smime_conf=smime_cfg,
-           subject=subject_str,
-           from_addr=from_addr,
-           to_addrs=to_addrs,
-           secret_text=secret_body,
-           secret_attachments=secret_attachments,
-	       count=1,
-     )
-        
-    if MULTIPLE_ENCRYPTED_SMIME:
-      rounds_for_encryption = MULTIPLE_CRYPT_ROUNDS 
-      #problem: email gets bigger with every iteration ...
-      print("\nType 4: sending multiple encrypted pure smime email. Rounds: ",rounds_for_encryption)
-      subject_str = f"Type 4: {rounds_for_encryption} times encrypted S/MIME message with content"
-      
-      send_multiple_encrypted_smime_email(
-           smtp_conf=smtp_cfg,
-           smime_conf=smime_cfg,
-           subject=subject_str,
-           from_addr=from_addr,
-           to_addrs=to_addrs,
-           secret_text=secret_body,
-           secret_attachments=secret_attachments,
-	       count=rounds_for_encryption,
-     )
-     
+   
      
     if SINGLE_ENCRYPTED_SMIME: 
       #problem: email gets bigger with every iteration ...
@@ -1241,8 +1179,42 @@ def main() -> None:
            secret_attachments=secret_attachments,
 	       count=1,
      )
-     
       
+  
+    if MULTIPLE_ENCRYPTED_SMIME:
+      rounds_for_encryption = MULTIPLE_CRYPT_ROUNDS 
+      #problem: email gets bigger with every iteration ...
+      print("\nType 4: sending multiple encrypted pure smime email. Rounds: ",rounds_for_encryption)
+      subject_str = f"Type 4: {rounds_for_encryption} times encrypted S/MIME message with content"
+      
+      send_multiple_encrypted_smime_email(
+           smtp_conf=smtp_cfg,
+           smime_conf=smime_cfg,
+           subject=subject_str,
+           from_addr=from_addr,
+           to_addrs=to_addrs,
+           secret_text=secret_body,
+           secret_attachments=secret_attachments,
+	       count=rounds_for_encryption,
+     )
+
+
+    if SINGLE_SIGNED_SMIME:
+      print("\nType 5: sending single signed pure smime email.")
+      subject_str = "Type 5: signed S/MIME message with content"
+      
+      send_multiple_signed_smime_email(
+           smtp_conf=smtp_cfg,
+           smime_conf=smime_cfg,
+           subject=subject_str,
+           from_addr=from_addr,
+           to_addrs=to_addrs,
+           secret_text=secret_body,
+           secret_attachments=secret_attachments,
+	       count=1,
+     )
+     
+       
     if MULTIPLE_SIGNED_SMIME:
       rounds_for_encryption = MULTIPLE_SIGN_ROUNDS  
       #problem: email gets bigger with every iteration ...
@@ -1260,12 +1232,12 @@ def main() -> None:
 	       count=rounds_for_encryption,
      )
 
-
-    if SINGLE_SIGNED_SMIME:
-      print("\nType 5: sending single signed pure smime email.")
-      subject_str = "Type 5: signed S/MIME message with content"
+    if SINGLE_SIGNED_ENCRYPTED_SMIME:
+      rounds_for_encryption = MULTIPLE_SIGN_CRYPT_ROUNDS  
+      print("\nType 7: sending single signed and encrypted pure smime email.")
+      subject_str = "Type 7: single signed and encrypted S/MIME message with content"
       
-      send_multiple_signed_smime_email(
+      send_multiple_signed_encrypted_smime_email(
            smtp_conf=smtp_cfg,
            smime_conf=smime_cfg,
            subject=subject_str,
@@ -1294,13 +1266,13 @@ def main() -> None:
 	       count=rounds_for_encryption,
      )
 
-
-    if SINGLE_SIGNED_ENCRYPTED_SMIME:
-      rounds_for_encryption = MULTIPLE_SIGN_CRYPT_ROUNDS  
-      print("\nType 7: sending single signed and encrypted pure smime email.")
-      subject_str = "Type 7: single signed and encrypted S/MIME message with content"
+   
+    if SINGLE_TRIPLE_WRAPPED_SMIME:
+      #problem: email gets bigger with every iteration ...
+      print("\nType 9: sending single triple wrapped pure smime email. Rounds: ",rounds_for_encryption)
+      subject_str = f"Type 9: single triple wrapped S/MIME message with content"
       
-      send_multiple_signed_encrypted_smime_email(
+      send_multiple_triple_wrapped_pure_smime_email(
            smtp_conf=smtp_cfg,
            smime_conf=smime_cfg,
            subject=subject_str,
@@ -1310,6 +1282,39 @@ def main() -> None:
            secret_attachments=secret_attachments,
 	       count=1,
      )
+            
+       
+    if MULTIPLE_TRIPLE_WRAPPED_SMIME:
+      rounds_for_encryption = MULTIPLE_TRIPLE_WRAPPED_ROUNDS  
+      #problem: email gets bigger with every iteration ...
+      print("\nType 10: sending multiple triple wrapped pure smime email. Rounds: ",rounds_for_encryption)
+      subject_str = f"Type 10: {rounds_for_encryption} times triple wrapped S/MIME message with content"
+      
+      send_multiple_triple_wrapped_pure_smime_email(
+           smtp_conf=smtp_cfg,
+           smime_conf=smime_cfg,
+           subject=subject_str,
+           from_addr=from_addr,
+           to_addrs=to_addrs,
+           secret_text=secret_body,
+           secret_attachments=secret_attachments,
+	       count=rounds_for_encryption,
+     )
+
+
+    #obsolete       
+    if TRIPLE_WRAPPED_PURE_SMIME:
+      print("\nType11: sending triple wrapped smime email")
+      send_triple_wrapped_pure_smime_email(
+           smtp_conf=smtp_cfg,
+           smime_conf=smime_cfg,
+           subject="Type 11: triple wrapped S/MIME message with content",
+           from_addr=from_addr,
+           to_addrs=to_addrs,
+           secret_text=secret_body,
+           secret_attachments=secret_attachments,
+       )       
+   
 
 
 if __name__ == "__main__":
