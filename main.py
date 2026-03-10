@@ -65,13 +65,28 @@ PURE_SMIME = False			#Type 2 obsolete! -equals Type 7
 MIXED_SMIME_EMAIL = True		#Type 1
 
 #rounds for multiple
-MULTIPLE_CRYPT_ROUNDS = 4    #25 w/o attachments
-MULTIPLE_SIGN_ROUNDS = 4  #26 w/o attachments
+MULTIPLE_CRYPT_ROUNDS = 5    #25 w/o attachments
+MULTIPLE_SIGN_ROUNDS = 7  #26 w/o attachments
 MULTIPLE_SIGN_CRYPT_ROUNDS = 3  #12 w/o attachments
 MULTIPLE_TRIPLE_WRAPPED_ROUNDS =4  #12 w/o attachments
 
 
 INCLUDE_ATTACHMENTS = True
+
+
+#reason for triple wrapped and multiple times S/MIME see:
+#
+#RFC2634 Section 1.1: Triple Wrapping
+#
+#   Some of the features of each service use the concept of a "triple
+#   wrapped" message. A triple wrapped message is one that has been
+#   signed, then encrypted, then signed again. The signers of the inner
+#   and outer signatures may be different entities or the same entity.
+#   Note that the S/MIME specification does not limit the number of
+#   nested encapsulations, so there may be more than three wrappings.
+#
+
+
 
 
 # ----------------------------
@@ -1269,7 +1284,7 @@ def main() -> None:
    
     if SINGLE_TRIPLE_WRAPPED_SMIME:
       #problem: email gets bigger with every iteration ...
-      print("\nType 9: sending single triple wrapped pure smime email. Rounds: ",rounds_for_encryption)
+      print("\nType 9: sending single triple wrapped pure smime email.")
       subject_str = f"Type 9: single triple wrapped S/MIME message with content"
       
       send_multiple_triple_wrapped_pure_smime_email(
