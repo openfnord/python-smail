@@ -1,6 +1,66 @@
+=================
+Tester for S/MIME
+=================
+
+main.py is a tester for s/mime mail. 
+Edit the config.ini with your mail server credentials and preferences and just run main.py to generate some fancy S/MIME messages. For example a mixed message with encrypted and non-encrypted content.
+Note: Certificates should be PEM format with separate private key file. The private key file shall have NO password.
+
+Example Run:
 ============
-Python SMAIL
-============
+
+ S/MIME tester
+-----------------
+
+> loading config from: config.ini
+
+> configuration: 
+
+SMTP host: smtp.XXXX.XXXX.XXX
+SMTP port: 587
+From: XXX@XXXX.XXXX.XXX
+To: ['XXX@XXXX.XXXX.XXX']
+Use SSL: False
+Use STARTTLS: True
+S/MIME cipher: aes256_cbc
+S/MIME hash digest algorithm: sha512
+S/MIME signature algorithm: rsa
+Signer certificate file: ./certs/XXXX_16384_512.crt
+Signer key file: ./private/privatekey_XXX@XXXX.XXXX.XXX_16384_512.key
+
+Recipient cert files: ['./certs/XXX@XXXX.XXXX.XXX_16384_512.crt']
+
+> sending mail
+
+
+with attachments
+
+Type 1: sending mixed smime email
+message size: 6556858
+...
+<and other types as configured in main.py>
+...
+
+Configuration:
+--------------
+Edit the magic values in the starting section of the source code of main.py, it is easier to change small details in the source code than to configure each and every item in a config file. So the config file 
+only has more or less static data such as account information.
+
+Also configure account and mail server data in the config.ini file.
+Here refer to the example config.ini file included.
+The config.ini data is printed optionally when the program runs for documentation reasons.
+
+Purpose:
+--------
+This S/MIME tester was written as part of a research project into S/MIME. It is intended to send different types of S/MIME messages which could also be nested in order to test email servers (not influenced) and email clients (very different behavior observed). A research paper on this topic will be published soon.
+
+Credits:
+--------
+The Tester is based in the included library Python SMAIL written by Robert Habermann, which was a bit improved where needed:
+
+====================
+Library Python SMAIL
+====================
 
 This library makes it simple to create S/MIME messages in Python. It supports signing (using RSA keys),
 encryption (using a public RSA key, in AES128-CBC, AES192-CBC or AES256-CBC modes) and the combination of both -
@@ -18,13 +78,6 @@ Requirements
 * asn1crypto
 * oscrypto
 
-
-
-Tester for s/mime
-------------------
-
-main.py is a tester for s/mime mail. Edit the config.ini with your mail server credentials and preferences and just run main.py to generate some fancy s/mime messages. For example a mixed message with encrypted and non-encrypted content.
-Note: Certificates should be PEM format with separate private key file. The private key file shall have no password.
 
 
 Example
