@@ -2,7 +2,7 @@
 Tester for S/MIME
 =================
 
-main.py is a tester for s/mime mail. 
+main.py is a tester for S/MIME mail. 
 Edit the config.ini with your mail server credentials and preferences and just run main.py to generate some fancy S/MIME messages. For example a mixed message with encrypted and non-encrypted content.
 Note: Certificates should be PEM format with separate private key file. The private key file shall have NO password.
 
@@ -56,7 +56,7 @@ This S/MIME tester was written as part of a research project into S/MIME. It is 
 
 Credits:
 --------
-The Tester is based in the included library Python SMAIL written by Robert Habermann, which was a bit improved where needed:
+The Tester is based on the included library Python SMAIL written by Robert Habermann, which was a bit improved where needed:
 
 ====================
 Library Python SMAIL
