@@ -43,26 +43,28 @@ SHOW_PROGRESS = False  # if true, rounds of email encryption or signing will be 
 
 #WHICH TEST MAILS ARE TO BE SENT?
 
-SINGLE_ENCRYPTED_SMIME = True		#Type 3
-MULTIPLE_ENCRYPTED_SMIME = True		#Type 4
+#single mixed signed and encrypted mail with unencrypted part
+MIXED_SMIME_EMAIL = True		        #Type 1
 
-SINGLE_SIGNED_SMIME = True		#Type 5
-MULTIPLE_SIGNED_SMIME = True		#Type 6
+#single signed and encrypted // obsolete equals Type7
+PURE_SMIME = False		            	#Type 2 obsolete! -equals Type 7
+
+SINGLE_ENCRYPTED_SMIME = True		    #Type 3
+MULTIPLE_ENCRYPTED_SMIME = True		    #Type 4
+
+SINGLE_SIGNED_SMIME = True		        #Type 5
+MULTIPLE_SIGNED_SMIME = True		    #Type 6
 
 SINGLE_SIGNED_ENCRYPTED_SMIME = True	#Type 7
 MULTIPLE_SIGNED_ENCRYPTED_SMIME = True	#Type 8
 
 #signed and encrypted and signed again
-TRIPLE_WRAPPED_PURE_SMIME = False	#Type 11 obsolete! -equals Type 9
-SINGLE_TRIPLE_WRAPPED_SMIME = True	#Type 9
+SINGLE_TRIPLE_WRAPPED_SMIME = True	    #Type 9
 MULTIPLE_TRIPLE_WRAPPED_SMIME = True	#Type 10
 
+TRIPLE_WRAPPED_PURE_SMIME = False	    #Type 11 obsolete! -equals Type 9
 
-#single signed and encrypted // obsolete equals Type7
-PURE_SMIME = False			#Type 2 obsolete! -equals Type 7
 
-#single mixed signed and encrypted mail with unencrypted part
-MIXED_SMIME_EMAIL = True		#Type 1
 
 #rounds for multiple
 MULTIPLE_CRYPT_ROUNDS = 5    #25 w/o attachments
