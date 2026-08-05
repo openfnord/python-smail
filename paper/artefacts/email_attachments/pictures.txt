@@ -2,12 +2,12 @@ sources of pictures and logos
 which served as email attachments for the tests
 
 
-picture				description				link
-confidential-logo.png		free clipart:				https://www.clker.com/uploads-183002-1.html
-				Black Mouse C57bl/6 clip art		https://www.clker.com/clipart-black-mouse-c57bl-6-2.html
+picture                         description                             link
+confidential-logo.png           free clipart:                           https://www.clker.com/uploads-183002-1.html
+                                Black Mouse C57bl/6 clip art            https://www.clker.com/clipart-black-mouse-c57bl-6-2.html
 
-logo.png			derived from SSHPoster2.jpg		http://www.openbsd.org/art/SSHPoster2.jpg
-									https://web.archive.org/web/20120106163011/http://www.openbsd.org/art/SSHPoster2.jpg
+logo.png                        derived from SSHPoster2.jpg             http://www.openbsd.org/art/SSHPoster2.jpg
+                                                                        https://web.archive.org/web/20120106163011/http://www.openbsd.org/art/SSHPoster2.jpg
 
-confidential-diagram.png	rustbook: panic.png			https://rustacean.net/more-crabby-things/rustbook-emotes/panic.png
+confidential-diagram.png        rustbook: panic.png                     https://rustacean.net/more-crabby-things/rustbook-emotes/panic.png
 
